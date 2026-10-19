@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>睡房 v5 — 床尾到頂層架</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Noto+Sans+TC:wght@400;500&family=Noto+Serif+TC:wght@560;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1d1915;
+    --muted: #5e564c;
+    --line: rgba(29, 25, 21, 0.14);
+    --paper: rgba(246, 241, 232, 0.92);
+    --bronze: #8a5436;
+    --plaster: #e4ddd2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #c5cdc8; color: var(--ink); }
+  body {
+    font-family: Outfit, "Noto Sans TC", sans-serif;
+    font-weight: 400;
+    overscroll-behavior: none;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  #stage { position: fixed; inset: 0 348px 0 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  #stage canvas:active { cursor: grabbing; }
+  .glass {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 50px rgba(40, 28, 16, 0.12);
+    backdrop-filter: blur(10px);
+  }
+  aside.glass {
+    position: fixed; top: 18px; right: 18px; bottom: 18px; width: 314px; z-index: 2;
+    overflow: auto; padding: 16px 16px 18px;
+  }
+  aside h2 {
+    font-family: Newsreader, "Noto Serif TC", serif;
+    font-size: 22px; font-weight: 560;
+    margin: 14px 0 6px; letter-spacing: -0.02em;
+  }
+  aside h2:first-child { margin-top: 0; }
+  .modes, .views { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modes button, .views button {
+    border: 1px solid var(--line); background: transparent;
+    padding: 7px 10px; border-radius: 999px; font-size: 12.5px;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .modes button:hover, .views button:hover { background: rgba(29, 25, 21, 0.06); }
+  .modes button[aria-pressed="true"], .views button[aria-pressed="true"] {
+    background: var(--ink); color: #f6f1e8; border-color: var(--ink);
+  }
+  .modes button[aria-pressed="true"]:hover, .views button[aria-pressed="true"]:hover {
+    background: var(--ink);
+  }
+  .modes button:focus-visible, .views button:focus-visible {
+    outline: 2px solid var(--bronze); outline-offset: 2px;
+  }
+  .note { color: var(--muted); font-size: 12.5px; line-height: 1.45; text-wrap: pretty; margin: 8px 0 0; }
+  svg.plan { width: 100%; height: auto; display: block; margin-top: 8px; background: #fbf8f2; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  td { padding: 5px 0; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+  td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 8px; }
+  #audit { font-size: 12px; margin: 8px 0 0; line-height: 1.45; text-wrap: pretty; }
+  #audit.ok { color: #2d6a45; }
+  #audit.bad { color: #8d2d2d; }
+  .hint { position: fixed; left: 18px; bottom: 16px; z-index: 2; color: var(--muted); font-size: 12px; }
+  @media (max-width: 900px) {
+    #stage { inset: 0 0 46vh 0; }
+    aside.glass {
+      top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; height: calc(46vh - 16px);
+    }
+    .hint { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<aside class="glass" id="sheet">
+  <h2>睡房 v5</h2>
+  <p class="note">進深 250（含窗台 40，地台 210）× 主窗 280 × 樓高 270。窗台上方有橫梁，門牆橫梁深 10。上架床退到門牆，以排梯上下。下架床床尾加一座 50 闊 × 20 深、到頂的開放層架。</p>
+  <h2>觀察角度</h2>
+  <div class="views" role="group" aria-label="觀察角度">
+    <button type="button" data-view="axon" aria-pressed="true">總覽</button>
+    <button type="button" data-view="entry">入口</button>
+    <button type="button" data-view="window">窗台</button>
+    <button type="button" data-view="desk">書桌</button>
+    <button type="button" data-view="shelf">層架</button>
+    <button type="button" data-view="plan">俯視</button>
+  </div>
+  <svg class="plan" id="plan" role="img" aria-label="平面圖"></svg>
+  <h2>Schedule</h2>
+  <table id="schedule"></table>
+  <p id="audit"></p>
+  <p class="note" id="footnote"></p>
+</aside>
+<p class="hint">拖曳旋轉 · 滾輪縮放 · 右鍵平移 · 鍵 1–6</p>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+<script>
+window.addEventListener("error", (ev) => {
+  document.documentElement.dataset.audit = "js-error: " + (ev.message || "unknown");
+});
+(function () {
+  try {
+  // Centimetres. Origin: floor corner where the left wall meets the main window.
+  // +X along the main window, left to right. +Z from the window toward the door. +Y up.
+  // Meshes are placed from their minimum corner.
+  const M = (cm) => cm / 100;
+  const BITE = 0.4;
+
+  function layoutOf(mode) {
+    const roomX = 280, roomZ = 250, roomY = 270;
+    const sillD = 40, sillH = 60;
+    // Foot against the door wall. The window end clears the beam over the sill.
+    const loft = {
+      x: 0, z: roomZ - 198, w: 100, d: 198,
+      under: 149, deck: 6, mattH: 10,
+      mattX: 4, mattZ: 3, mattW: 91, mattD: 190
+    };
+    // Desk stays where it was. It is not moved with the loft.
+    // Window edge stays at z=15. Of the 60 cm top, 25 cm sits on the sill;
+    // the extra 10 cm extends into the room, and the chair follows that edge.
+    const deskL = { x: 0, z: 15, w: 90, d: 60, top: 73, slab: 4 };
+    // Vertical rung ladder on the room side of the loft, against the door wall.
+    const ladder = { z: roomZ - 44, w: 44, rungs: 6 };
+    // Moves with the loft. Back face meets the door wall. Opening faces -Z.
+    const robe = { x: 8, z: loft.z + loft.d - 56, w: 74, d: 56, h: 142 };
+    const lower = { x: 90, z: 0, w: 190, d: 91, base: 60, mattH: 12 };
+    // Open shelf standing in the corner the two beds leave open.
+    // One side is the loft's room-side face (x = 100). The open face looks back at
+    // the main window (-Z), so it starts at the foot of the window bed (z = 91).
+    // The lowest `split` bays turn the other way and open on the door side, so the
+    // room reads them without reaching over the bed. Two backs, one per section.
+    // No doors: sides, backs and boards only, floor to ceiling.
+    const shelf = {
+      x: loft.x + loft.w, z: lower.z + lower.d, w: 50, d: 25,
+      y: 0, h: roomY, t: 2, bays: 7, split: 3
+    };
+    // Off the right wall now. Its left end butts the new shelf, and the sitter is on
+    // the +X side facing -X, into the room, instead of facing the wall. Still 80 along
+    // z and flush to the foot of the window bed, so only the depth direction flipped.
+    const deskR = { x: shelf.x + shelf.w, z: lower.z + lower.d, w: 60, d: 80, top: 73, slab: 4 };
+    // On top of that desk: a 50 cm frame of back and side supports, then a bookcase
+    // carried from the top of the frame all the way to the ceiling. The back runs the
+    // full length; both the frame and the bookcase are only 25 deep, so the desk front
+    // stays open from the top all the way up.
+    const hutch = { h: 50, sideD: 25, t: 2, bays: 4 };
+    // 40 wide x 60 deep, floor to ceiling. Back on the right wall in the foot-right
+    // corner, door-ward end on the door wall, open face turned left into the room.
+    const tall = { x: roomX - 60, z: roomZ - 40, w: 60, d: 40, h: roomY };
+    // Negative yaw swings the leaf to +Z, into the corridor.
+    const door = { x0: 128, x1: 208, h: 205, depth: 84, swing: -58 };
+    // Centered on the full left wall. Width stays 64.
+    const sideW = 64;
+    const side = { z0: (roomZ - sideW) / 2, z1: (roomZ + sideW) / 2, sill: 96, head: 252 };
+    const main = { x0: 12, x1: 268, sill: 60, head: 238 };
+    // Downstand above the sill, full sill depth, from the window head to the ceiling.
+    const lintel = { x: 0, z: 0, w: roomX, d: sillD, y: main.head, h: roomY - main.head };
+    // Same head and drop on the door wall, only 10cm into the room.
+    const doorBeam = { x: 0, z: roomZ - 10, w: roomX, d: 10, y: main.head, h: roomY - main.head };
+    const walk = door.x0 - (loft.x + loft.w);
+    return {
+      mode, roomX, roomZ, roomY, sillD, sillH, wall: 12,
+      loft, deskL, robe, ladder, lower, shelf, deskR, hutch, tall, door, side, main, lintel, doorBeam, walk
+    };
+  }
+
+  const stage = document.getElementById("stage");
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0xc5d0cc, 1);
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(48, 1, 0.04, 80);
+  const content = new THREE.Group();
+  scene.add(content);
+
+  const hemi = new THREE.HemisphereLight(0xf4f1ea, 0x8d6248, 0.48);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff3e4, 1.7);
+  sun.position.set(0.9, 4.4, -2.4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.near = 0.4;
+  sun.shadow.camera.far = 16;
+  sun.shadow.camera.left = -5;
+  sun.shadow.camera.right = 5;
+  sun.shadow.camera.top = 5;
+  sun.shadow.camera.bottom = -5;
+  sun.shadow.bias = -0.00045;
+  sun.shadow.normalBias = 0.04;
+  sun.target.position.set(1.35, 0.8, 1.15);
+  scene.add(sun);
+  scene.add(sun.target);
+  const fill = new THREE.DirectionalLight(0xd5e4ea, 0.42);
+  fill.position.set(2.6, 2.4, 4.2);
+  scene.add(fill);
+  const underLoft = new THREE.PointLight(0xfff1df, 0.55, 3.4, 2);
+  underLoft.position.set(0.48, 1.05, 0.85);
+  scene.add(underLoft);
+
+  function canvasTex(w, h, draw, repeatX, repeatY) {
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    t.repeat.set(repeatX, repeatY);
+    return t;
+  }
+  function plankMap(roomX, roomZ) {
+    return canvasTex(512, 128, (g, w, h) => {
+      g.fillStyle = "#4a2a1c";
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 9; i++) {
+        const tone = 70 + (i % 3) * 18;
+        g.fillStyle = `rgb(${tone + 48}, ${Math.max(20, tone - 18)}, ${Math.max(12, tone - 48)})`;
+        g.fillRect(0, i * (h / 9), w, h / 9 - 1);
+        g.strokeStyle = "rgba(40,18,10,0.35)";
+        g.beginPath();
+        for (let x = 8; x < w; x += 7) {
+          g.moveTo(x, i * (h / 9) + 2);
+          g.lineTo(x + 10, (i + 1) * (h / 9) - 3);
+        }
+        g.stroke();
+      }
+    }, roomX / 130, roomZ / 108);
+  }
+  function graniteMap() {
+    return canvasTex(256, 256, (g, w, h) => {
+      g.fillStyle = "#c4c1ba";
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 2200; i++) {
+        const v = 90 + Math.random() * 140;
+        g.fillStyle = `rgba(${v}, ${v}, ${v + 6}, ${0.18 + Math.random() * 0.45})`;
+        g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2.2, 1 + Math.random() * 2.2);
+      }
+    }, 1.6, 1.2);
+  }
+
+  const mat = {};
+  function makeMaterials(L) {
+    const wall = new THREE.MeshStandardMaterial({ color: 0xf4f0e8, roughness: 0.92 });
+    const oak = new THREE.MeshStandardMaterial({ color: 0xc6a36a, roughness: 0.62 });
+    const oakDark = new THREE.MeshStandardMaterial({ color: 0x8d6436, roughness: 0.7 });
+    const floor = new THREE.MeshStandardMaterial({ map: plankMap(L.roomX, L.roomZ), roughness: 0.78, metalness: 0.02 });
+    const stone = new THREE.MeshStandardMaterial({ map: graniteMap(), color: 0xd5d2cb, roughness: 0.55 });
+    const linen = new THREE.MeshStandardMaterial({ color: 0xefe6d6, roughness: 0.92 });
+    const quilt = new THREE.MeshStandardMaterial({ color: 0xe3d0b6, roughness: 0.9 });
+    const quilt2 = new THREE.MeshStandardMaterial({ color: 0xd9c6aa, roughness: 0.9 });
+    const pillow = new THREE.MeshStandardMaterial({ color: 0xf7f3ec, roughness: 0.86 });
+    const cloth = new THREE.MeshStandardMaterial({ color: 0xd9c7a4, roughness: 0.95, side: THREE.DoubleSide });
+    const cloth2 = new THREE.MeshStandardMaterial({ color: 0xc9c3b8, roughness: 0.95 });
+    const frame = new THREE.MeshStandardMaterial({ color: 0x596066, roughness: 0.38, metalness: 0.55 });
+    const glass = new THREE.MeshStandardMaterial({
+      color: 0xc9e0ea, transparent: true, opacity: 0.18, roughness: 0.04, metalness: 0.05, side: THREE.DoubleSide
+    });
+    const door = new THREE.MeshStandardMaterial({ color: 0x5c3a2a, roughness: 0.55 });
+    const drawer = new THREE.MeshStandardMaterial({ color: 0xf7f4ee, roughness: 0.55 });
+    const rice = new THREE.MeshStandardMaterial({ color: 0xf6f1e4, roughness: 0.52 });
+    const ground = new THREE.MeshStandardMaterial({ color: 0xb7c0b4, roughness: 1 });
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0xe7e0d4, roughness: 0.94 });
+    Object.assign(mat, {
+      wall, oak, oakDark, floor, stone, linen, quilt, quilt2, pillow, cloth, cloth2,
+      frame, glass, door, drawer, rice, ground, beam: beamMat
+    });
+  }
+
+  const boxes = [];
+  function addBox(parent, x, y, z, w, h, d, material, name, flags) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(M(w), M(h), M(d)), material);
+    mesh.position.set(M(x + w / 2), M(y + h / 2), M(z + d / 2));
+    const seeThrough = material.transparent || (flags && flags.indexOf("glass") >= 0);
+    mesh.castShadow = !seeThrough;
+    mesh.receiveShadow = !seeThrough;
+    mesh.name = name || "";
+    parent.add(mesh);
+    boxes.push({ name: name || "box", x, y, z, w, h, d, flags: flags || "" });
+    return mesh;
+  }
+
+  function disposeGroup(group) {
+    group.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+    });
+    group.clear();
+  }
+
+  let current = null;
+  let viewName = "axon";
+
+  function build(L) {
+    disposeGroup(content);
+    boxes.length = 0;
+    Object.values(mat).forEach((m) => {
+      if (m && m.map) m.map.dispose();
+      if (m && m.dispose) m.dispose();
+    });
+    makeMaterials(L);
+
+    const X = L.roomX, Z = L.roomZ, Y = L.roomY, t = L.wall;
+    addBox(content, -80, -30, -90, X + 280, 28, Z + 320, mat.ground, "ground", "outside");
+    addBox(content, 0, -8, 0, X, 8, Z, mat.floor, "floor");
+
+    const ceilings = new THREE.Group();
+    content.add(ceilings);
+    content.userData.ceiling = ceilings;
+    addBox(ceilings, -t, Y, -t, X + t * 2, 8, Z + t * 2, mat.wall, "ceiling");
+
+    addShell(L);
+    addWindows(L);
+    addLintel(L);
+    addLoft(L);
+    addWardrobe(L);
+    addLowerBed(L);
+    addShelf(L);
+    addLadder(L);
+    addDesk(L.deskL, "left");
+    addDesk(L.deskR, "right");
+    addDeskHutch(L);
+    addChairAtDesk(L.deskL, "window");
+    addChairAtDesk(L.deskR, "left");
+    addTallRobe(L);
+    addDoor(L);
+  }
+
+  function addShell(L) {
+    const X = L.roomX, Z = L.roomZ, Y = L.roomY, t = L.wall;
+    const W = L.main, S = L.side, D = L.door;
+
+    // Main window wall, inner face z = 0. Pieces do not share volume.
+    addBox(content, -t, W.head, -t, X + t * 2, Y - W.head, t, mat.wall, "wall-window-head");
+    addBox(content, -t, 0, -t, X + t * 2, W.sill, t, mat.wall, "wall-window-breast");
+    addBox(content, -t, W.sill, -t, W.x0 + t, W.head - W.sill, t, mat.wall, "wall-window-jamb");
+    addBox(content, W.x1, W.sill, -t, X + t - W.x1, W.head - W.sill, t, mat.wall, "wall-window-jamb");
+
+    // Left wall, side window. Inner face x = 0.
+    addBox(content, -t, S.head, 0, t, Y - S.head, Z, mat.wall, "wall-side-head");
+    addBox(content, -t, 0, 0, t, S.sill, Z, mat.wall, "wall-side-breast");
+    addBox(content, -t, S.sill, 0, t, S.head - S.sill, S.z0, mat.wall, "wall-side-jamb");
+    addBox(content, -t, S.sill, S.z1, t, S.head - S.sill, Z - S.z1, mat.wall, "wall-side-jamb");
+
+    // Right wall, solid.
+    const cut = new THREE.Group();
+    content.add(cut);
+    content.userData.cutaway = cut;
+    addBox(cut, X, 0, 0, t, Y, Z, mat.wall, "wall-right");
+
+    // Door wall, inner face z = Z. The leaf swings past this face, into the corridor.
+    addBox(cut, -t, D.h, Z, X + t * 2, Y - D.h, t, mat.wall, "wall-door-head");
+    addBox(cut, -t, 0, Z, D.x0 + t, D.h, t, mat.wall, "wall-door-left");
+    addBox(cut, D.x1, 0, Z, X + t - D.x1, D.h, t, mat.wall, "wall-door-right");
+
+    const cZ = Z + t;
+    const cD = D.depth - t;
+    addBox(cut, D.x0, -8, Z, D.x1 - D.x0, 8, D.depth, mat.floor, "floor");
+    addBox(content.userData.ceiling, D.x0 - t, Y, Z, (D.x1 - D.x0) + t * 2, 8, D.depth + t, mat.wall, "ceiling");
+    addBox(cut, D.x0 - t, 0, cZ, t, Y, cD, mat.wall, "wall-corridor");
+    addBox(cut, D.x1, 0, cZ, t, Y, cD, mat.wall, "wall-corridor");
+
+    // Granite sill along the whole main window.
+    addBox(content, 0, 0, 0, X, L.sillH - 3, L.sillD, mat.wall, "sill");
+    addBox(content, 0, L.sillH - 3, 0, X, 3, L.sillD, mat.stone, "sill-cap");
+    // Narrow stone lip on the side window. It sits above the desk top.
+    addBox(content, 0, S.sill - 3, S.z0, 8, 3, S.z1 - S.z0, mat.stone, "sill-side");
+  }
+
+  function addWindows(L) {
+    const W = L.main, S = L.side, Z = L.roomZ;
+    const glassY = W.sill + 2;
+    const glassH = W.head - W.sill - 4;
+    addBox(content, W.x0, W.sill, -1.5, W.x1 - W.x0, 3, 3, mat.frame, "frame", "trim");
+    addBox(content, W.x0, W.head - 3, -1.5, W.x1 - W.x0, 3, 3, mat.frame, "frame", "trim");
+    addBox(content, W.x0, W.sill, -1.5, 3, W.head - W.sill, 3, mat.frame, "frame", "trim");
+    addBox(content, W.x1 - 3, W.sill, -1.5, 3, W.head - W.sill, 3, mat.frame, "frame", "trim");
+    const midX = (W.x0 + W.x1) / 2;
+    addBox(content, midX - 1.4, glassY, -2.2, 2.8, glassH, 2.4, mat.frame, "mullion", "trim");
+    addBox(content, W.x0 + 3, 148, -2.2, W.x1 - W.x0 - 6, 2.8, 2.4, mat.frame, "mullion", "trim");
+    addBox(content, W.x0 + 4, glassY, -1.2, W.x1 - W.x0 - 8, glassH, 0.8, mat.glass, "glass-main", "glass");
+
+    addBox(content, -1.5, S.sill, S.z0, 3, 3, S.z1 - S.z0, mat.frame, "frame", "trim");
+    addBox(content, -1.5, S.head - 3, S.z0, 3, 3, S.z1 - S.z0, mat.frame, "frame", "trim");
+    addBox(content, -1.5, S.sill, S.z0, 3, S.head - S.sill, 3, mat.frame, "frame", "trim");
+    addBox(content, -1.5, S.sill, S.z1 - 3, 3, S.head - S.sill, 3, mat.frame, "frame", "trim");
+    addBox(content, -1.2, S.sill + 3, S.z0 + 4, 0.8, S.head - S.sill - 6, S.z1 - S.z0 - 8, mat.glass, "glass-side", "glass");
+
+    addBox(content, W.x0 + 2, W.sill, -9, 16, W.head - W.sill, 5, mat.cloth, "curtain", "outside");
+    addBox(content, W.x1 - 18, W.sill, -9, 16, W.head - W.sill, 5, mat.cloth, "curtain", "outside");
+    addBox(content, -8, S.sill, S.z0 + 2, 5, S.head - S.sill, 12, mat.cloth, "curtain", "outside");
+  }
+
+  function addLintel(L) {
+    const B = L.lintel;
+    // Above the sill, inside the room. Bottom meets the window head; top meets the ceiling.
+    addBox(content, B.x, B.y, B.z, B.w, B.h, B.d, mat.beam, "lintel");
+    const D = L.doorBeam;
+    addBox(content, D.x, D.y, D.z, D.w, D.h, D.d, mat.beam, "door-beam");
+  }
+
+  function addLoft(L) {
+    const F = L.loft;
+    const deckY = F.under;
+    const deckTop = F.under + F.deck;
+    const beamY = deckY - 12;
+    const x = F.x, z = F.z;
+    // The window-end corner is over the desk. This post stands just past the desktop.
+    // The side window is mid-wall, so its lip is clear of this post.
+    // The room-side window corner has no post: that spot is the lower bed.
+    const postZ = L.deskL.z + L.deskL.d;
+    addBox(content, x, 0, postZ, 4, beamY, 4, mat.oak, "post");
+    addBox(content, x, 0, z + F.d - 4, 4, beamY, 4, mat.oak, "post");
+    addBox(content, x + F.w - 4, 0, z + F.d - 4, 4, beamY, 4, mat.oak, "post");
+    addBox(content, x, beamY, z, 6, 12, F.d, mat.oak, "loft-beam");
+    addBox(content, x + F.w - 4, beamY, z, 4, 12, F.d, mat.oak, "loft-beam");
+    addBox(content, x, deckY, z, F.w, F.deck, F.d, mat.oak, "deck");
+
+    const my = deckTop - BITE;
+    addBox(content, x + F.mattX, my, z + F.mattZ, F.mattW, F.mattH + BITE, F.mattD, mat.linen, "mattress-loft");
+    const sleep = deckTop + F.mattH;
+    addBox(content, x + 16, sleep - BITE, z + F.mattZ + 4, 62, 8 + BITE, 22, mat.pillow, "pillow");
+    addBox(content, x + 10, sleep - BITE, z + F.mattZ + 34, 72, 5 + BITE, 120, mat.quilt, "duvet");
+
+    // Room-side rail stops for the ladder. Only the head stretch, up to where the side
+    // cabinet starts, is carried to the ceiling: that is the run that looks straight
+    // into the window bed. It sits flush with the loft edge and butts the cabinet, so
+    // the two beds cannot see each other and there is no gap.
+    const S = L.ladder;
+    const guardHead = 44, guardSide = 22;
+    const gt = 3;
+    const gx = x + F.w - gt;            // outer face lands exactly on x = 100
+    const cabZ = L.shelf.z;
+    const toTop = L.roomY - deckTop;
+    addBox(content, gx, deckTop, z, gt, toTop, cabZ - z, mat.oak, "guard");
+    addBox(content, x + F.w - 3, deckTop, cabZ, 2.4, guardSide, S.z - cabZ, mat.oak, "guard");
+    const after = S.z + S.w;
+    const tail = (z + F.d - 6) - after;
+    if (tail > 2) addBox(content, x + F.w - 3, deckTop, after, 2.4, guardSide, tail, mat.oak, "guard");
+    addBox(content, x + 8, deckTop, z + F.d - 3.2, F.w - 16, 16, 2.4, mat.oak, "guard");
+    // Head guard now runs right up to the tall section, so the corner is closed too.
+    addBox(content, x + 8, deckTop, z, gx - (x + 8), guardHead, 2.4, mat.oak, "guard");
+    // Above the two low runs: a slatted screen, not a panel. Vertical battens with
+    // even gaps, so light and air still pass while nothing shows over from the bed.
+    const slatW = 5, slatGap = 10;
+    function slats(x0, y0, z0, len, along) {
+      const n = Math.max(1, Math.round(len / (slatW + slatGap)));
+      const step = len / n;
+      for (let i = 0; i < n; i++) {
+        const o = i * step + (step - slatW) / 2;
+        if (along === "x") addBox(content, x0 + o, y0, z0, slatW, L.roomY - y0, 2.4, mat.oak, "guard-slat");
+        else addBox(content, x0, y0, z0 + o, 2.4, L.roomY - y0, slatW, mat.oak, "guard-slat");
+      }
+    }
+    slats(x + 8, deckTop + guardHead, z, gx - (x + 8), "x");
+    slats(x + F.w - 3, deckTop + guardSide, cabZ, S.z - cabZ, "z");
+  }
+
+  function addWardrobe(L) {
+    const R = L.robe;
+    const x = R.x, z = R.z, w = R.w, d = R.d, h = R.h;
+    const t = 2;
+    const mid = x + w * 0.5;
+    // Back is the foot end. The open face is z, toward the main window and the desk.
+    addBox(content, x + t, 6, z + d - t, w - t * 2, h - 8, t, mat.oak, "robe-back");
+    addBox(content, x, 0, z, t, h, d, mat.oak, "robe-side");
+    addBox(content, x + w - t, 0, z, t, h, d, mat.oak, "robe-side");
+    addBox(content, x + t, h - t, z, w - t * 2, t, d - t, mat.oak, "robe-top");
+    addBox(content, x + t, 0, z, w - t * 2, 6, d - t, mat.oak, "robe-plinth");
+    addBox(content, mid - 1, 6, z, 2, h - 6 - t, d - t, mat.oak, "robe-div");
+
+    const hang0 = x + t + 3;
+    const hang1 = mid - 1 - 3;
+    addBox(content, hang0, 108, z + 20, hang1 - hang0, 2, 2, mat.frame, "rod");
+    const tones = [mat.cloth, mat.linen, mat.cloth2];
+    for (let i = 0; i < 3; i++) {
+      const xx = hang0 + 2 + i * ((hang1 - hang0 - 8) / 3);
+      addBox(content, xx, 56, z + 6, 2, 52, 18, tones[i], "garment");
+    }
+
+    const dx0 = mid + 1;
+    const dx1 = x + w - t;
+    const inner = dx1 - dx0;
+    addBox(content, dx0 + 2, 104, z + 2, inner - 4, 2.2, d - t - 4, mat.oak, "robe-shelf");
+    const gap = 3;
+    const count = 3;
+    const avail = 104 - 8 - gap * (count + 1);
+    const dh = avail / count;
+    for (let i = 0; i < count; i++) {
+      const yy = 8 + gap + i * (dh + gap);
+      addBox(content, dx0 + 2, yy, z + 2, inner - 6, dh, 40, mat.drawer, "robe-drawer");
+      addBox(content, dx0 + inner / 2 - 5, yy + dh / 2 - 1, z - 1, 10, 2, 1.6, mat.oakDark, "pull");
+    }
+  }
+
+  function addLowerBed(L) {
+    const B = L.lower;
+    const top = B.base;
+    // Oak frame only inward of the sill. The outer 40cm of the mattress lies on the stone.
+    const z0 = L.sillD;
+    const depth = B.z + B.d - z0;
+    addBox(content, B.x + 4, 14, z0, B.w - 8, top - 14 - 6, 4, mat.oak, "bed-rail");
+    addBox(content, B.x + 4, 14, B.z + B.d - 6, 52, top - 14 - 6, 4, mat.oak, "bed-rail");
+    addBox(content, B.x + B.w - 56, 14, B.z + B.d - 6, 52, top - 14 - 6, 4, mat.oak, "bed-rail");
+    addBox(content, B.x, 14, z0 + 4, 4, top - 14 - 6, depth - 8, mat.oak, "bed-rail");
+    addBox(content, B.x + B.w - 4, 14, z0 + 4, 4, top - 14 - 6, depth - 8, mat.oak, "bed-rail");
+    addBox(content, B.x, top - 6, z0, B.w, 6, depth, mat.oak, "bed-top");
+    // Drawer in the open front, clear of the loft bay so it can pull into the room.
+    addBox(content, B.x + 70, 18, z0 + 8, 96, 28, depth - 16, mat.drawer, "bed-drawer");
+    addBox(content, B.x + 70 + 40, 30, B.z + B.d - 7.2, 16, 2.2, 1.4, mat.oakDark, "pull");
+
+    const my = top - BITE;
+    addBox(content, B.x, my, B.z, B.w, B.mattH + BITE, B.d, mat.linen, "mattress-window");
+    const sleep = top + B.mattH;
+    addBox(content, B.x + B.w - 36, sleep - BITE, 10, 28, 8 + BITE, 68, mat.pillow, "pillow");
+    addBox(content, B.x + 8, sleep - BITE, 8, 136, 5 + BITE, 74, mat.quilt2, "duvet");
+    addBox(content, B.x + B.w - 8, sleep - BITE, 12, 5, 22 + BITE, 64, mat.oak, "headboard");
+    // Low rail on the window edge. Just inside the glazing frame, 16cm above the mattress.
+    addBox(content, B.x + 4, sleep - BITE, 1.6, B.w - 12, 16 + BITE, 2.6, mat.oak, "guard");
+    // Foot guard rises in three steps: the window beam caps it where it runs over the
+    // sill depth, the strip past the beam reaches the ceiling, and under the loft it
+    // still stops at the deck.
+    const pY = sleep - BITE;
+    const pZ1 = L.sillD;                 // window-end face of the beam over the sill
+    const pZ2 = L.loft.z;                // window end of the loft
+    addBox(content, B.x, pY, B.z, 4, L.lintel.y - pY, pZ1 - B.z, mat.oak, "foot-panel");
+    addBox(content, B.x, pY, pZ1, 4, L.roomY - pY, pZ2 - pZ1, mat.oak, "foot-panel");
+    addBox(content, B.x, pY, pZ2, 4, L.loft.under - pY, (B.z + B.d) - pZ2, mat.oak, "foot-panel");
+  }
+
+  function addLadder(L) {
+    const F = L.loft;
+    const S = L.ladder;
+    const deckTop = F.under + F.deck;
+    // Rails are vertical. Their room face is +X, shared with the loft side at x = F.x + F.w.
+    const rail = 3.2;
+    const depth = 4;
+    const x = F.x + F.w;
+    addBox(content, x, 0, S.z, depth, deckTop, rail, mat.oak, "ladder-rail");
+    addBox(content, x, 0, S.z + S.w - rail, depth, deckTop, rail, mat.oak, "ladder-rail");
+    for (let i = 1; i <= S.rungs; i++) {
+      const y = deckTop * i / (S.rungs + 1) - 1.2;
+      addBox(content, x, y, S.z + rail, depth, 2.4, S.w - rail * 2, mat.oakDark, "ladder-rung");
+    }
+    // On the deck edge, clear of the mattress, which ends at x = mattX + mattW.
+    addBox(content, F.x + F.mattX + F.mattW + 1, deckTop, S.z, 8, 3, S.w, mat.oak, "ladder-cleat");
+  }
+
+  function addDesk(T, which) {
+    const y = T.top - T.slab;
+    addBox(content, T.x, y, T.z, T.w, T.slab, T.d, mat.oak, "desk-" + which);
+    const leg = 3.2;
+    const spots = [
+      [T.x + 4, T.z + 4],
+      [T.x + T.w - 4 - leg, T.z + 4],
+      [T.x + 4, T.z + T.d - 4 - leg],
+      [T.x + T.w - 4 - leg, T.z + T.d - 4 - leg]
+    ];
+    spots.forEach(([lx, lz]) => {
+      const onSill = which === "left" && lz < L_sill(T);
+      const y0 = onSill ? 60 - BITE : 0;
+      addBox(content, lx, y0, lz, leg, y - y0, leg, mat.oakDark, "desk-leg");
+    });
+    if (which === "left") {
+      // Drawer stays on the floor side of the sill. 25 cm of the top is over the stone.
+      const z0 = L_sill() + 2;
+      addBox(content, T.x + 12, 28, z0, 24, 22, 14, mat.drawer, "desk-drawer");
+      addBox(content, T.x + 18, 37, z0 + 13, 12, 2, 1.6, mat.oakDark, "pull");
+      addBox(content, T.x + 40, T.top, T.z + 28, 18, 1, 14, mat.linen, "notebook");
+    } else {
+      // Drawer on the sitter's side: front and pull face +X, the new open side.
+      addBox(content, T.x + T.w - 32, 32, T.z + 60, 20, 20, 14, mat.drawer, "desk-drawer");
+      addBox(content, T.x + T.w - 10.2, 40, T.z + 64, 1.6, 2, 8, mat.oakDark, "pull");
+      addBox(content, T.x + T.w - 30, T.top, T.z + 18, 16, 1, 20, mat.linen, "notebook");
+    }
+  }
+  function L_sill() { return 40; }
+
+  function addDeskHutch(L) {
+    const T = L.deskR, H = L.hutch;
+    const t = H.t;
+    const x = T.x, z = T.z, d = T.d;
+    const y0 = T.top;                 // the frame stands on the desktop
+    const y1 = y0 + H.h;              // top of the frame, bottom of the bookcase
+    const innerX = x + t, innerW = H.sideD - t * 2;
+    const innerZ = z + t, innerD = d - t * 2;
+    // Frame, 50 high. Back runs the length on the shelf side; the two side fins only
+    // come 25 in from it, so the desk keeps its front edge clear.
+    addBox(content, x, y0, innerZ, t, H.h, innerD, mat.oak, "hutch-back");
+    addBox(content, x, y0, z, H.sideD, H.h, t, mat.oak, "hutch-side");
+    addBox(content, x, y0, z + d - t, H.sideD, H.h, t, mat.oak, "hutch-side");
+    // Bookcase on top of the frame, up to the ceiling. Same 25 cm depth as the frame
+    // under it, so the desk front stays open from the top all the way up. Opens on
+    // +X, the sitter's side: one chair reaches both the desk and the shelves.
+    const bh = L.roomY - y1;
+    addBox(content, x, y1, innerZ, t, bh, innerD, mat.oak, "book-back");
+    addBox(content, x, y1, z, H.sideD, bh, t, mat.oak, "book-side");
+    addBox(content, x, y1, z + d - t, H.sideD, bh, t, mat.oak, "book-side");
+    const pitch = Math.round((bh - t) / H.bays);
+    for (let i = 0; i < H.bays; i++) {
+      addBox(content, innerX, y1 + i * pitch, innerZ, innerW, t, innerD, mat.oak, "book-board");
+    }
+    addBox(content, innerX, y1 + bh - t, innerZ, innerW, t, innerD, mat.oak, "book-top");
+  }
+
+  function addChairAtDesk(T, facing) {
+    if (facing === "window") {
+      addChair(T.x + 36, T.z + T.d - 12, 40, 30, "window");
+    } else {
+      // Seat stays 36 deep and moves with the room edge of the top, which is now +X.
+      addChair(T.x + T.w - 36, T.z + 24, 36, 30, facing);
+    }
+  }
+
+  function addChair(x, z, w, d, facing) {
+    const seatY = 44, seatH = 4, leg = 3;
+    addBox(content, x, seatY, z, w, seatH, d, mat.linen, "chair");
+    [[0, 0], [w - leg, 0], [0, d - leg], [w - leg, d - leg]].forEach(([dx, dz]) => {
+      addBox(content, x + dx, 0, z + dz, leg, seatY, leg, mat.oakDark, "chair-leg");
+    });
+    if (facing === "window") {
+      addBox(content, x + 2, seatY + seatH, z + d, w - 4, 38, 3, mat.oak, "chair-back");
+    } else if (facing === "left") {
+      // Back on +X, so the sitter looks -X across the top.
+      addBox(content, x + w, seatY + seatH, z + 3, 3, 36, d - 6, mat.oak, "chair-back");
+    } else {
+      addBox(content, x - 3, seatY + seatH, z + 3, 3, 36, d - 6, mat.oak, "chair-back");
+    }
+  }
+
+  function addTallRobe(L) {
+    const R = L.tall;
+    const x = R.x, z = R.z, w = R.w, d = R.d, h = R.h;
+    const t = 2;
+    // The door-wall beam owns the top 10cm of the far side, so the carcass stops there.
+    const beamZ = L.doorBeam.z;
+    const beamY = L.doorBeam.y;
+    // Back on the right wall, open face to the left. One bay only: at 40 wide a
+    // divider would leave nothing worth hanging on either side.
+    const bx = x + w - t;               // inner face of the back
+    const fz = z + t, fd = d - t * 2;
+    addBox(content, bx, 6, fz, t, beamY - 6, fd, mat.oak, "tall-back");
+    addBox(content, bx, beamY, fz, t, (h - t) - beamY, beamZ - fz, mat.oak, "tall-back");
+    addBox(content, x, 0, z, w, h, t, mat.oak, "tall-side");
+    addBox(content, x, 0, z + d - t, w, beamY, t, mat.oak, "tall-side");
+    addBox(content, x, h - t, fz, w - t, t, beamZ - fz, mat.oak, "tall-top");
+    addBox(content, x, 0, fz, w - t, 6, fd, mat.oak, "tall-plinth");
+    // Three stacked leaves, one per third. Any leaf that crosses the beam stops at the
+    // beam face, so the top one is built in two pieces.
+    const front = 1.6;
+    const leafTop = 8 + (h - 16);
+    const nDoor = 3, gap = 2;
+    const seg = (leafTop - 8 - gap * (nDoor - 1)) / nDoor;
+    for (let i = 0; i < nDoor; i++) {
+      const y0 = 8 + i * (seg + gap);
+      const y1 = y0 + seg;
+      if (y1 <= beamY) {
+        addBox(content, x, y0, fz, front, y1 - y0, fd, mat.rice, "tall-door");
+      } else {
+        addBox(content, x, y0, fz, front, beamY - y0, fd, mat.rice, "tall-door");
+        addBox(content, x, beamY, fz, front, y1 - beamY, beamZ - fz, mat.rice, "tall-door");
+      }
+      const py0 = y0, py1 = Math.min(y1, beamY);
+      addBox(content, x - 1.4, (py0 + py1) / 2 - 9, fz + 4, 1.4, 18, 1.6, mat.frame, "pull");
+    }
+    // Shelf that lines up with the bottom leaf, so it opens onto storage.
+    addBox(content, x + 2, 8 + seg + gap, fz, bx - (x + 2), 2, fd, mat.oak, "tall-shelf");
+    // Rail runs the 40 wide, one shelf above it.
+    const rz0 = fz + 3, rz1 = z + d - t - 3;
+    addBox(content, bx - 10, 214, rz0, 2, 2, rz1 - rz0, mat.frame, "rod");
+    const tones = [mat.cloth, mat.linen, mat.cloth2, mat.cloth];
+    for (let i = 0; i < 4; i++) {
+      const zz = rz0 + 2 + i * ((rz1 - rz0 - 8) / 4);
+      addBox(content, bx - 52, 118, zz, 42, 96, 2.4, tones[i], "garment");
+    }
+    const sDepth = 242 > beamY ? beamZ - fz : fd;
+    addBox(content, x + 2, 240, fz, bx - (x + 2), 2, sDepth, mat.oak, "tall-shelf");
+  }
+
+  function addShelf(L) {
+    const S = L.shelf;
+    const x = S.x, y = S.y, z = S.z, w = S.w, d = S.d, h = S.h, t = S.t;
+    const innerX = x + t, innerW = w - t * 2;
+    const pitch = Math.round((h - t) / S.bays);
+    // Height where the section that opens on the door stops.
+    const splitY = y + pitch * S.split;
+    // Sides close the shelf on the loft side and the room side, full depth.
+    addBox(content, x, y, z, t, h, d, mat.oak, "shelf-side");
+    addBox(content, x + w - t, y, z, t, h, d, mat.oak, "shelf-side");
+    // Two backs on opposite faces. Low section: window side, so it opens on the door.
+    // High section: door side, so it opens on the window the bed sees.
+    addBox(content, innerX, y, z, innerW, splitY - y, t, mat.oak, "shelf-back-low");
+    const upY = splitY + t;
+    addBox(content, innerX, upY, z + d - t, innerW, (y + h) - upY, t, mat.oak, "shelf-back-high");
+    // Boards stop at the back of their own section. The board on the split line is
+    // the only one that runs the full depth; both backs land clear of it.
+    for (let i = 0; i < S.bays; i++) {
+      const by = y + i * pitch;
+      const onSplit = by === splitY;
+      addBox(content, innerX, by, onSplit ? z : by < splitY ? z + t : z,
+        innerW, t, onSplit ? d : d - t, mat.oak, "shelf-board");
+    }
+    addBox(content, innerX, y + h - t, z, innerW, t, d - t, mat.oak, "shelf-top");
+  }
+
+  function addDoor(L) {
+    const D = L.door;
+    const hinge = new THREE.Group();
+    hinge.position.set(M(D.x0), 0, M(L.roomZ));
+    hinge.rotation.y = D.swing * Math.PI / 180;
+    (content.userData.cutaway || content).add(hinge);
+    const leaf = D.x1 - D.x0;
+    addBox(hinge, 0, 1, 0, leaf, D.h - 2, 4, mat.door, "door", "door");
+    addBox(hinge, leaf - 10, 100, 4, 3, 12, 1.4, mat.frame, "handle", "door");
+  }
+
+  function overlap(a, b, eps) {
+    const dx = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+    const dy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    const dz = Math.min(a.z + a.d, b.z + b.d) - Math.max(a.z, b.z);
+    if (dx > eps && dy > eps && dz > eps) return [dx, dy, dz];
+    return null;
+  }
+
+  function audit(L) {
+    const skip = /glass|frame|mullion|curtain|ground|vent|handle|notebook|pull|rod|garment/;
+    const shell = /^wall|^floor|^ceiling|^sill/;
+    const solid = boxes.filter((b) => !skip.test(b.name) && b.flags.indexOf("glass") < 0 && b.flags.indexOf("trim") < 0 && b.flags.indexOf("outside") < 0 && b.flags.indexOf("door") < 0);
+    const clashes = [];
+    for (let i = 0; i < solid.length; i++) {
+      const a = solid[i];
+      if (!shell.test(a.name)) {
+        if (a.x < -0.5 || a.y < -0.5 || a.z < -0.5 || a.x + a.w > L.roomX + 0.5 || a.z + a.d > L.roomZ + 0.5 || a.y + a.h > L.roomY + 1) {
+          clashes.push(a.name + " outside room");
+        }
+      }
+      for (let j = i + 1; j < solid.length; j++) {
+        const b = solid[j];
+        if (shell.test(a.name) && shell.test(b.name)) continue;
+        const o = overlap(a, b, 0.8);
+        if (o) clashes.push(a.name + " × " + b.name);
+      }
+    }
+    return clashes;
+  }
+
+  const target = new THREE.Vector3();
+  const spherical = new THREE.Spherical();
+  const offset = new THREE.Vector3();
+  let dragging = false;
+  let dragMode = "rot";
+  let lastX = 0, lastY = 0;
+
+  function syncOrbit() {
+    offset.copy(camera.position).sub(target);
+    spherical.setFromVector3(offset);
+  }
+  function applyOrbit() {
+    spherical.phi = Math.max(0.12, Math.min(1.45, spherical.phi));
+    spherical.radius = Math.max(0.45, Math.min(12, spherical.radius));
+    offset.setFromSpherical(spherical);
+    camera.position.copy(target).add(offset);
+    if (camera.position.y < 0.16) camera.position.y = 0.16;
+    camera.lookAt(target);
+  }
+  function setView(name) {
+    const L = current;
+    viewName = name;
+    camera.up.set(0, 1, 0);
+    const X = M(L.roomX), Z = M(L.roomZ);
+    const ceilingOn = name === "entry" || name === "window" || name === "desk" || name === "shelf";
+    if (content.userData.ceiling) content.userData.ceiling.visible = ceilingOn;
+    if (content.userData.cutaway) content.userData.cutaway.visible = name !== "axon";
+    camera.fov = name === "desk" ? 52 : name === "entry" ? 48 : name === "shelf" ? 50 : 42;
+    if (name === "entry") {
+      // Free jamb of the corridor, just outside the room. The leaf swings
+      // the other way, so this line of sight stays in the opening. The target is
+      // pulled in close, because the bookcase now stands between the door and the bed.
+      const jambX = M(L.door.x1);
+      camera.position.set(jambX - 0.14, 1.48, Z + 0.22);
+      target.set(1.2, 1.0, 1.15);
+    } else if (name === "window") {
+      // The bookcase blocks the old line of sight, so this stands above the window
+      // bed instead: clear of the shelf (x≤150) and of the bookcase (z≥91).
+      camera.position.set(1.92, 1.9, 0.78);
+      target.set(1.75, 0.62, 0.12);
+    } else if (name === "desk") {
+      // Eye height in the chair, in front of the wardrobe (z 116).
+      camera.position.set(0.52, 1.12, 1.02);
+      target.set(0.36, 0.68, 0.1);
+    } else if (name === "shelf") {
+      // Over the window bed, above the mattress, looking into the open face.
+      // Shelf is x 100–150, z 91–111, so this sits clear of it at z 58.
+      camera.position.set(1.26, 1.72, 0.58);
+      target.set(1.26, 1.18, 1.04);
+    } else if (name === "plan") {
+      camera.up.set(0, 0, -1);
+      camera.position.set(X / 2, 6.2, Z / 2);
+      target.set(X / 2, 0, Z / 2);
+    } else {
+      camera.position.set(X + 0.35, 4.6, Z + 1.15);
+      target.set(1.2, 0.55, 0.85);
+    }
+    camera.lookAt(target);
+    camera.updateProjectionMatrix();
+    syncOrbit();
+    document.querySelectorAll("[data-view]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.dataset.view === name ? "true" : "false");
+    });
+  }
+
+  renderer.domElement.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    dragMode = e.button === 2 || e.shiftKey ? "pan" : "rot";
+    lastX = e.clientX; lastY = e.clientY;
+    if (camera.up.y < 0.9) {
+      camera.up.set(0, 1, 0);
+      camera.lookAt(target);
+      syncOrbit();
+    }
+    renderer.domElement.setPointerCapture(e.pointerId);
+  });
+  renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+  renderer.domElement.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    if (dragMode === "rot") {
+      spherical.theta -= dx * 0.005;
+      spherical.phi -= dy * 0.005;
+      applyOrbit();
+    } else {
+      camera.updateMatrixWorld();
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      const scale = spherical.radius * 0.0016;
+      target.addScaledVector(right, -dx * scale);
+      target.addScaledVector(up, dy * scale);
+      applyOrbit();
+    }
+  });
+  renderer.domElement.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    spherical.radius *= e.deltaY > 0 ? 1.08 : 0.92;
+    applyOrbit();
+  }, { passive: false });
+  renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  window.addEventListener("keydown", (e) => {
+    const map = { "1": "axon", "2": "entry", "3": "window", "4": "desk", "5": "shelf", "6": "plan" };
+    if (map[e.key]) setView(map[e.key]);
+  });
+
+  function svgEl(name, attrs) {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.keys(attrs).forEach((k) => n.setAttribute(k, attrs[k]));
+    return n;
+  }
+  function drawPlan(L) {
+    const svg = document.getElementById("plan");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const padL = 36, padT = 36, padR = 92, padB = 58;
+    const extra = L.door.depth;
+    const vbW = L.roomX + padL + padR;
+    const vbH = L.roomZ + extra + padT + padB;
+    svg.setAttribute("viewBox", `0 0 ${vbW} ${vbH}`);
+    const g = svgEl("g", { transform: `translate(${padL} ${padT})` });
+    svg.appendChild(g);
+    function rect(x, z, w, d, fill, stroke, sw) {
+      g.appendChild(svgEl("rect", {
+        x, y: z, width: w, height: d, fill: fill || "none",
+        stroke: stroke || "none", "stroke-width": sw || 0
+      }));
+    }
+    function line(x1, z1, x2, z2, stroke, sw) {
+      g.appendChild(svgEl("line", {
+        x1, y1: z1, x2, y2: z2, stroke, "stroke-width": sw || 1
+      }));
+    }
+    function label(x, z, text, size, anchor) {
+      const t = svgEl("text", {
+        x, y: z, fill: "#1d1915", "font-size": size || 11,
+        "font-family": "Outfit, Noto Sans TC, sans-serif",
+        "text-anchor": anchor || "middle"
+      });
+      t.textContent = text;
+      g.appendChild(t);
+    }
+    rect(-12, -12, L.roomX + 24, L.roomZ + 24, "#1c1c1c");
+    rect(0, 0, L.roomX, L.roomZ, "#f4f0e6");
+    rect(L.door.x0, L.roomZ, L.door.x1 - L.door.x0, L.door.depth, "#efe6d4");
+    rect(0, 0, L.roomX, L.sillD, "#e4e1da");
+    rect(-6, L.side.z0, 6, L.side.z1 - L.side.z0, "#d5e3ea");
+    rect(L.main.x0, -6, L.main.x1 - L.main.x0, 6, "#d5e3ea");
+
+    const F = L.loft, B = L.lower;
+    rect(0, 0, L.lintel.w, L.lintel.d, "rgba(90,86,78,0.16)", "#5c564c", 1.2);
+    rect(F.x, F.z, F.w, F.d, "rgba(232,177,92,0.28)", "#9a6a28", 1.5);
+    rect(B.x, B.z, B.w, B.d, "#f0c98a", "#9a6a28", 1.2);
+    rect(B.x + 4, 1.6, B.w - 12, 2.6, "#8d6436", "#6a4324", 0.6);
+    rect(B.x, B.z, 4, B.d, "#8d6436", "#6a4324", 0.8);
+    const ox = B.x, ow = F.x + F.w - B.x;
+    const oz = Math.max(B.z, F.z);
+    const od = Math.min(B.z + B.d, F.z + F.d) - oz;
+    if (ow > 2 && od > 2) rect(ox, oz, ow, od, "rgba(184,122,61,0.35)", "none", 0);
+    rect(L.shelf.x, L.shelf.z, L.shelf.w, L.shelf.d, "#e7d3b4", "#8d6436", 1.2);
+    // The two backs, so the turn at the split line reads in plan.
+    rect(L.shelf.x, L.shelf.z, L.shelf.w, L.shelf.t, "#8d6436", "none", 0);
+    rect(L.shelf.x, L.shelf.z + L.shelf.d - L.shelf.t, L.shelf.w, L.shelf.t, "#8d6436", "none", 0);
+    rect(L.deskL.x, L.deskL.z, L.deskL.w, L.deskL.d, "#c6b0de", "#6d5a88", 1);
+    rect(L.robe.x, L.robe.z, L.robe.w, L.robe.d, "#2f5288", "#1d3358", 1);
+    rect(F.x + F.w, L.ladder.z, 4, L.ladder.w, "#e7d3b4", "#8d6436", 1.2);
+    rect(L.deskR.x, L.deskR.z, L.deskR.w, L.deskR.d, "#c6b0de", "#6d5a88", 1);
+    rect(L.deskR.x, L.deskR.z, L.hutch.t, L.deskR.d, "#8d6436", "none", 0);
+    rect(L.tall.x, L.tall.z, L.tall.w, L.tall.d, "#2f5288", "#1d3358", 1.2);
+
+    rect(L.doorBeam.x, L.doorBeam.z, L.doorBeam.w, L.doorBeam.d, "rgba(90,86,78,0.35)", "#5c564c", 1.2);
+    label(L.lintel.w / 2, 14, "橫梁", 10);
+    label(48, L.doorBeam.z + 7, "橫梁", 9);
+    label(F.x + F.w / 2, F.z + F.d / 2, "上架床");
+    label(L.deskL.x + L.deskL.w / 2, L.deskL.z + L.deskL.d / 2 + 4, "書枱");
+    label(L.robe.x + L.robe.w / 2, L.robe.z + L.robe.d / 2 + 4, "衣櫃");
+    label(B.x + B.w / 2, B.d / 2 + 4, "下架床");
+    label(L.shelf.x + L.shelf.w / 2, L.shelf.z + L.shelf.d / 2 + 4, "層架", 10);
+    label(F.x + F.w + 8, L.ladder.z + L.ladder.w / 2, "排梯", 10, "start");
+    label(L.deskR.x + L.deskR.w / 2, L.deskR.z + 26, "右書枱", 11);
+    label(L.deskR.x + L.deskR.w / 2, L.deskR.z + 44, "到頂書架", 10);
+    label(L.tall.x + L.tall.w / 2, L.tall.z + L.tall.d / 2 + 4, "到頂衣櫃", 10);
+
+    const leaf = L.door.x1 - L.door.x0;
+    const open = Math.abs(L.door.swing) * Math.PI / 180;
+    const tipX = L.door.x0 + leaf * Math.cos(open);
+    const tipZ = L.roomZ + leaf * Math.sin(open);
+    line(L.door.x0, L.roomZ, tipX, tipZ, "#5c3a2a", 1.6);
+    const arc = svgEl("path", {
+      d: `M ${L.door.x1} ${L.roomZ} A ${leaf} ${leaf} 0 0 1 ${tipX} ${tipZ}`,
+      fill: "none", stroke: "#5c3a2a", "stroke-width": 0.8
+    });
+    g.appendChild(arc);
+
+    line(0, -18, L.roomX, -18, "#8a5436");
+    line(0, -22, 0, -14, "#8a5436");
+    line(L.roomX, -22, L.roomX, -14, "#8a5436");
+    label(L.roomX / 2, -22, "280 主窗");
+    line(L.roomX + 18, 0, L.roomX + 18, L.roomZ, "#8a5436");
+    line(L.roomX + 14, 0, L.roomX + 22, 0, "#8a5436");
+    line(L.roomX + 14, L.sillD, L.roomX + 22, L.sillD, "#8a5436");
+    line(L.roomX + 14, L.roomZ, L.roomX + 22, L.roomZ, "#8a5436");
+    label(L.roomX + 26, L.sillD / 2 + 3, "窗台 40", 9, "start");
+    label(L.roomX + 26, (L.sillD + L.roomZ) / 2, "地台 " + (L.roomZ - L.sillD), 9, "start");
+    label(L.roomX + 26, L.roomZ + 16, "進深 250", 9, "start");
+    label(-8, (L.side.z0 + L.side.z1) / 2, "側窗", 9, "end");
+    label((L.door.x0 + L.door.x1) / 2, L.roomZ + L.door.depth + 14, "門 向外");
+  }
+
+  function fillSheet(L, clashes) {
+    const F = L.loft;
+    const surface = F.under + F.deck + F.mattH;
+    const lowerTop = L.lower.base + L.lower.mattH;
+    const underLoft = L.loft.x + L.loft.w - L.lower.x;
+    const rows = [
+      ["房間", L.roomZ + " × " + L.roomX + " × " + L.roomY],
+      ["進深", L.roomZ + "，含窗台 " + L.sillD + "，地台 " + (L.roomZ - L.sillD)],
+      ["主窗牆", L.roomX],
+      ["主窗窗台", L.sillD + " 深 × " + L.sillH + " 高，已計入進深"],
+      ["側窗", (L.side.z1 - L.side.z0) + " 闊，居左牆中，台 " + L.side.sill + "，頂 " + L.side.head],
+      ["上架床褥", F.mattW + " × " + F.mattD],
+      ["上架外框", F.w + " × " + F.d + "，床尾貼門牆，床底 " + F.under + "，床面 " + surface],
+      ["上架淨空", (L.roomY - surface) + "（床面至天花）"],
+      ["窗台橫梁", L.lintel.w + " 闊 × " + L.lintel.d + " 深 × " + L.lintel.h + "，底 " + L.lintel.y],
+      ["門牆橫梁", L.doorBeam.w + " 闊 × " + L.doorBeam.d + " 深 × " + L.doorBeam.h + "，底 " + L.doorBeam.y],
+      ["窗下書枱", L.deskL.w + " × " + L.deskL.d + " × " + L.deskL.top + "，" + (L.sillD - L.deskL.z) + " 在窗台上"],
+      ["床尾衣櫃", L.robe.w + " 闊 × " + L.robe.d + " 深 × " + L.robe.h + "，開口向主窗，背貼門牆"],
+      ["排梯", L.ladder.w + " 闊，直身，" + L.ladder.rungs + " 橫檔，升 " + (F.under + F.deck)],
+      ["下架床褥", L.lower.w + " × " + L.lower.d + "，床面 " + lowerTop],
+      ["床尾層架", L.shelf.w + " 闊 × " + L.shelf.d + " 深 × " + L.shelf.h + " 高，貼上架床房側，首 " + L.shelf.split + " 格向門、其餘 " + (L.shelf.bays - L.shelf.split) + " 格向主窗，" + L.shelf.bays + " 格層架，冇櫃門"],
+      ["窗邊圍欄", (L.lower.w - 12) + " 長 × 16 高，床面以上"],
+      ["窗台 / 床框下", L.sillD + " 在窗台，" + underLoft + " 在上架床框下"],
+      ["床尾圍板", L.lower.d + " 長 × 4 厚，由床面分段升：z0–" + L.sillD + " 升到 " + L.lintel.y + "（窗台橫梁底）、z" + L.sillD + "–" + L.loft.z + " 升到 " + L.roomY + "（天花）、z" + L.loft.z + "–" + (L.lower.z + L.lower.d) + " 停喺上架床底 " + L.loft.under + "，維持不變"],
+      ["右書枱", L.deskR.d + " 闊 × " + L.deskR.w + " 深 × " + L.deskR.top + "，左端貼新層架，離開右牆，坐向改為面向左"],
+      ["右書枱座位", "坐喺枱嘅 +X 邊，背向右牆，面向層架方向，椅 36 見方"],
+      ["枱上支撐架", "後板 " + L.deskR.d + " 長 × " + L.hutch.h + " 高 × " + L.hutch.t + " 厚，靠層架嗰邊；兩側板 " + L.hutch.sideD + " 深 × " + L.hutch.h + " 高 × " + L.hutch.t + " 厚，企喺枱面 " + L.deskR.top + " 上面"],
+      ["枱上到頂書架", (L.deskR.d - L.hutch.t * 2) + " 闊 × " + (L.hutch.sideD - L.hutch.t * 2) + " 深 × " + (L.roomY - L.deskR.top - L.hutch.h) + " 高，由枱面 " + L.deskR.top + " 上面 " + L.hutch.h + " 起，頂到天花，" + L.hutch.bays + " 格，開口向坐向，冇櫃門；深過闊，書平放"],
+      ["到頂衣櫃", L.tall.d + " 闊 × " + L.tall.w + " 深 × " + L.tall.h + "，靠門邊右下角，背貼右牆、埋門嗰邊貼門牆，門朝左對住房間，米白三扇上中下，單格通櫃"],
+      ["床側至門框", L.walk],
+      ["房門", (L.door.x1 - L.door.x0) + " × " + L.door.h + "，向外開"]
+    ];
+    const table = document.getElementById("schedule");
+    table.innerHTML = "<tr><th>Piece</th><th>cm</th></tr>" + rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
+    const auditEl = document.getElementById("audit");
+    if (clashes.length) {
+      auditEl.className = "bad";
+      auditEl.textContent = "Fit check: " + clashes.slice(0, 6).join("; ");
+    } else {
+      auditEl.className = "ok";
+      auditEl.textContent = "幾何沒有重疊。上架床床尾貼門牆，窗下書枱留在原位。新層架只同上架床側同下架床尾夾面，冇撞到任何一件。床側離門框 " + L.walk + "cm。";
+    }
+    const foot = document.getElementById("footnote");
+    foot.textContent = "窗台上方橫梁深 " + L.lintel.d + "，底 " + L.lintel.y + "，上接天花。門牆橫梁同樣底 " + L.doorBeam.y + "，深 " + L.doorBeam.d + "。上架床床尾貼門牆，窗端離主窗 " + F.z + "cm。床尾衣櫃一起後退，背貼門牆，開口仍向書枱。下架床床尾加一座層架，闊 " + L.shelf.w + "、深 " + L.shelf.d + "，由落地到天花 " + L.shelf.h + "。左面貼住上架床房側，前面貼住下架床尾。佢有兩塊背板：下面 " + L.shelf.split + " 格嘅背板喺主窗嗰邊，所以打開嗰面對住門，行入房就見到下面三格；上面 " + (L.shelf.bays - L.shelf.split) + " 格嘅背板喺門嗰邊，打開嗰面對住主窗，由床上伸手就攞到書。分界喺離地 " + Math.round((L.shelf.h - L.shelf.t) / L.shelf.bays) * L.shelf.split + "，嗰塊層板做足 " + L.shelf.d + " 深。冇櫃門，只有兩塊側板、兩塊背板同 " + L.shelf.bays + " 塊層板，每格淨 " + Math.round((L.shelf.h - L.shelf.t) / L.shelf.bays) + "。窗下書枱 " + L.deskL.w + " × " + L.deskL.d + " 不移動，靠窗 " + (L.sillD - L.deskL.z) + "cm 在窗台上。排梯在上架床靠房一側，貼門牆，直身，" + L.ladder.w + " 闊，" + L.ladder.rungs + " 橫檔。下架床靠窗一邊有矮圍欄，床面以上 16cm。床尾圍板分三段升：窗台範圍 " + L.sillD + " 升到橫梁底 " + L.lintel.y + "，出咗橫梁 " + (L.loft.z - L.sillD) + " 一段升到天花 " + L.roomY + "，上架床底下嗰 " + (L.lower.z + L.lower.d - L.loft.z) + " 停喺床底 " + L.loft.under + "。上架床圍板：房側床頭至側櫃嗰 " + (L.shelf.z - L.loft.z) + " 由床面升到天花 " + L.roomY + "，3cm 厚、外面齊上架床邊（x100），側櫃亦由 x100 起，兩者夾實冇 gap。側櫃之後嗰 " + (L.ladder.z - L.shelf.z) + " 回復 22 高，床頭 " + (F.under + F.deck + 44) + " 高。呢兩段上面唔係整塊板，係間條：一排 5cm 闊、2.4cm 厚嘅直條，條與條之間平均 9.4 至 9.8cm 空位，由圍板頂一路排到天花，可以透風透光，但平躺望唔到對面張床。床頭圍板伸到高身嗰塊為止，轉角都封實。床側約 " + underLoft + "cm 在上架床框下。右書枱離開右牆，左端貼住新層架，長 " + L.deskR.d + "、深 " + L.deskR.w + "，仍然緊貼下架床尾。坐向倒轉：人坐喺枱嘅 +X 邊，背向右牆，面向層架。桌下抽屜同拉手跟住移到 +X 邊。枱面 " + L.deskR.top + " 上面先起 " + L.hutch.h + " 高嘅支撐架：後板貼住層架嗰邊行足 " + (L.deskR.d - L.hutch.t * 2) + "，兩側板只伸入 " + L.hutch.sideD + " 就停，枱面前緣留返 " + (L.deskR.w - L.hutch.sideD) + " 開放。支撐架上面接住到頂書架，由 " + (L.deskR.top + L.hutch.h) + " 起到天花 " + L.roomY + "，長 " + (L.deskR.d - L.hutch.t * 2) + "、深同支撐架一樣得 " + (L.hutch.sideD - L.hutch.t * 2) + "，" + L.hutch.bays + " 格層板，開口同枱一樣向 +X，一張椅同時用到枱同書架。層板淨闊 " + (L.hutch.sideD - L.hutch.t * 2) + " 而長 " + (L.deskR.d - L.hutch.t * 2) + "，係深過闊嘅長條形，按你嘅書平放咗擺，唔使改比例。枱面前 " + (L.deskR.w - L.hutch.sideD) + " 由枱面到天花都冇嘢阻。原本喺右牆嘅吊櫃已經刪走，右牆 y150 以下而家係淨牆。到頂衣櫃 " + L.tall.d + " 闊 × " + L.tall.w + " 深，由落地到天花 " + L.tall.h + "，擺喺門邊右下角：背貼死右牆、埋門嗰邊貼門牆，櫃門朝左對住房間打開，入到房右邊就見到櫃門。櫃門米白三扇，上中下各一扇、每扇 " + Math.round((L.roomY - 16 - 4) / 3) + " 高中間留 2cm 縫，每扇一個拉手，單格通櫃，內有掛衫杆同頂部層板。門牆橫梁深 " + L.doorBeam.d + "，衣櫃埋門嗰邊喺橫梁嗰 10cm 停手，櫃門上段同層板亦喺嗰個高度收短。房門向外開，門框離上架床側 " + L.walk + "cm。上架床面以上約 " + (L.roomY - surface) + "cm。";
+    drawPlan(L);
+  }
+
+  function resize() {
+    const w = stage.clientWidth || 1;
+    const h = stage.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+
+  function applyMode(mode) {
+    current = layoutOf(mode);
+    build(current);
+    const clashes = audit(current);
+    fillSheet(current, clashes);
+    document.documentElement.dataset.audit = clashes.length ? clashes.join(" | ") : "ok";
+    document.documentElement.dataset.mode = mode;
+    document.documentElement.dataset.walk = String(current.walk);
+    document.querySelectorAll("[data-mode]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.dataset.mode === mode ? "true" : "false");
+    });
+    setView(viewName);
+    resize();
+    renderer.render(scene, camera);
+  }
+
+  document.querySelectorAll("[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.view));
+  });
+  document.querySelectorAll("[data-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => applyMode(btn.dataset.mode));
+  });
+
+  const q = new URLSearchParams(location.search);
+  viewName = ["entry", "window", "axon", "plan", "desk", "shelf"].includes(q.get("view")) ? q.get("view") : "axon";
+  if (q.get("clean") === "1") {
+    document.querySelectorAll("aside, .hint").forEach((n) => { n.style.display = "none"; });
+    stage.style.inset = "0";
+  }
+  applyMode(q.get("mode") === "sketch" ? "sketch" : "confirmed");
+
+  function frame() {
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.__ready = true;
+  } catch (err) {
+    document.documentElement.dataset.audit = "js-error: " + (err.message || err);
+    const el = document.getElementById("audit");
+    if (el) { el.className = "bad"; el.textContent = String(err && err.message || err); }
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
