@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>睡房二 v3 - 駿逸峰 6C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Noto+Sans+TC:wght@400;500&family=Noto+Serif+TC:wght@560;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1d1915;
+    --muted: #5e564c;
+    --line: rgba(29, 25, 21, 0.14);
+    --paper: rgba(246, 241, 232, 0.92);
+    --bronze: #8a5436;
+    --plaster: #e4ddd2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #c5cdc8; color: var(--ink); }
+  body {
+    font-family: Outfit, "Noto Sans TC", sans-serif;
+    font-weight: 400;
+    overscroll-behavior: none;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  #stage { position: fixed; inset: 0 348px 0 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  #stage canvas:active { cursor: grabbing; }
+  .glass {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 50px rgba(40, 28, 16, 0.12);
+    backdrop-filter: blur(10px);
+  }
+  aside.glass {
+    position: fixed; top: 18px; right: 18px; bottom: 18px; width: 314px; z-index: 2;
+    overflow: auto; padding: 16px 16px 18px;
+  }
+  aside h2 {
+    font-family: Newsreader, "Noto Serif TC", serif;
+    font-size: 22px; font-weight: 560;
+    margin: 14px 0 6px; letter-spacing: -0.02em;
+  }
+  aside h2:first-child { margin-top: 0; }
+  .modes, .views { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modes button, .views button {
+    border: 1px solid var(--line); background: transparent;
+    padding: 7px 10px; border-radius: 999px; font-size: 12.5px;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .modes button:hover, .views button:hover { background: rgba(29, 25, 21, 0.06); }
+  .modes button[aria-pressed="true"], .views button[aria-pressed="true"] {
+    background: var(--ink); color: #f6f1e8; border-color: var(--ink);
+  }
+  .modes button[aria-pressed="true"]:hover, .views button[aria-pressed="true"]:hover {
+    background: var(--ink);
+  }
+  .modes button:focus-visible, .views button:focus-visible {
+    outline: 2px solid var(--bronze); outline-offset: 2px;
+  }
+  .note { color: var(--muted); font-size: 12.5px; line-height: 1.45; text-wrap: pretty; margin: 8px 0 0; }
+  svg.plan { width: 100%; height: auto; display: block; margin-top: 8px; background: #fbf8f2; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; table-layout: fixed; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  td { padding: 5px 0; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+  th:first-child, td:first-child { width: 34%; }
+  td:last-child { text-align: right; font-variant-numeric: tabular-nums; padding-left: 8px; overflow-wrap: anywhere; }
+  #audit { font-size: 12px; margin: 8px 0 0; line-height: 1.45; text-wrap: pretty; }
+  #audit.ok { color: #2d6a45; }
+  #audit.bad { color: #8d2d2d; }
+  .hint { position: fixed; left: 18px; bottom: 16px; z-index: 2; color: var(--muted); font-size: 12px; }
+  @media (max-width: 900px) {
+    #stage { inset: 0 0 46vh 0; }
+    aside.glass {
+      top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; height: calc(46vh - 16px);
+    }
+    .hint { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<aside class="glass" id="sheet">
+  <h2>睡房二 v3</h2>
+  <p class="note">房間闊 200 × 進深 200，另加窗台 40（總進深 240）× 樓高 270。窗台橫通全房，上面係一道大窗。冇側窗，左牆係實牆。房門喺左下角，向外開。床 200 × 150 橫放喺窗台上面，床頭貼右牆；底下 40 深石窗台 + 110 深木地台。右下角一座到頂衣櫃，深 90 × 闊 100，貼住右牆同門牆；上半朝大窗開門，下半朝左牆開玻璃門。冇書枱。</p>
+  <h2>觀察角度</h2>
+  <div class="views" role="group" aria-label="觀察角度">
+    <button type="button" data-view="axon" aria-pressed="true">總覽</button>
+    <button type="button" data-view="entry" aria-pressed="false">入口</button>
+    <button type="button" data-view="plan" aria-pressed="false">俯視</button>
+  </div>
+  <svg class="plan" id="plan" role="img" aria-label="平面圖"></svg>
+  <h2>Schedule</h2>
+  <table id="schedule"></table>
+  <p id="audit"></p>
+  <p class="note" id="footnote"></p>
+</aside>
+<p class="hint">拖曳旋轉 · 滾輪縮放 · 右鍵平移 · 鍵 1–3</p>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+<script>
+window.addEventListener("error", (ev) => {
+  document.documentElement.dataset.audit = "js-error: " + (ev.message || "unknown");
+});
+(function () {
+  try {
+  // Centimetres. Origin: floor corner where the left wall meets the main window.
+  // +X along the main window, left to right. +Z from the window toward the door. +Y up.
+  // Meshes are placed from their minimum corner.
+  const M = (cm) => cm / 100;
+  const BITE = 0.4;
+
+  function layoutOf(mode) {
+    // Room: 200 wide x 200 deep, plus a 40 deep sill along the window wall.
+    // The sill counts as part of the depth, so the floor runs 240 from window to door.
+    const roomX = 200, roomZ = 240, roomY = 270;
+    const sillD = 40, sillH = 60;
+    // Big window on the window wall, centred, nearly the full width.
+    const main = { x0: 8, x1: 192, sill: 60, head: 238 };
+    // Downstand above the sill, full sill depth, from the window head to the ceiling.
+    const lintel = { x: 0, z: 0, w: roomX, d: sillD, y: main.head, h: roomY - main.head };
+    // Same head and drop on the door wall, only 10cm into the room.
+    const doorBeam = { x: 0, z: roomZ - 10, w: roomX, d: 10, y: main.head, h: roomY - main.head };
+    // Door at the bottom-left of the door wall. Negative yaw swings the leaf to +Z,
+    // into the corridor.
+    const door = { x0: 14, x1: 94, h: 205, depth: 84, swing: -58 };
+    // The bed lies across the window wall. Its 200 length fills the 200 width of the
+    // room: head against the right wall, foot against the left wall. It stands on
+    // the sill, so the stone sill is the first 40cm of a 150 deep platform and the
+    // mattress lies across both at 60.
+    const bed = {
+      x: 0, z: 0, w: 200, d: 150,
+      base: 60,          // platform top, flush with the sill
+      mattH: 20,         // mattress on top of that
+      platZ: 40,         // timber platform starts where the stone sill ends
+      platD: 110,
+      headH: 32,         // headboard above the mattress, at the right wall
+      drawerRows: 2, drawerCols: 2
+    };
+    // Floor-to-ceiling wardrobe in the far right corner. 90 wide along the door
+    // wall, 60 deep into the room, back against the right wall, doors facing left.
+    // The door-wall beam runs through the top 32cm on that corner, so the carcass
+    // and the top board stop at it.
+    // The floor to ceiling wardrobe in the far right corner: 90 deep by 100
+    // wide, standing on the right wall and the door wall. The upper half has
+    // hinged doors on the window side; the lower half opens to the left wall.
+    const wardrobe = {
+      x: 100, z: 150, w: 100, d: 90, h: roomY, t: 2, doorT: 1.6, split: 135
+    };
+    return {
+      mode, roomX, roomZ, roomY, sillD, sillH, wall: 12,
+      main, lintel, doorBeam, door, bed, wardrobe
+    };
+  }
+
+  const stage = document.getElementById("stage");
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0xc5d0cc, 1);
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(48, 1, 0.04, 80);
+  const content = new THREE.Group();
+  scene.add(content);
+
+  const hemi = new THREE.HemisphereLight(0xf4f1ea, 0x8d6248, 0.48);
+  scene.add(hemi);
+  // The sun comes through the big window, so it rakes in from -Z.
+  const sun = new THREE.DirectionalLight(0xfff3e4, 1.7);
+  sun.position.set(0.7, 4.4, -2.8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.near = 0.4;
+  sun.shadow.camera.far = 16;
+  sun.shadow.camera.left = -5;
+  sun.shadow.camera.right = 5;
+  sun.shadow.camera.top = 5;
+  sun.shadow.camera.bottom = -5;
+  sun.shadow.bias = -0.00045;
+  sun.shadow.normalBias = 0.04;
+  sun.target.position.set(1.0, 0.7, 1.1);
+  scene.add(sun);
+  scene.add(sun.target);
+  const fill = new THREE.DirectionalLight(0xd5e4ea, 0.42);
+  fill.position.set(2.6, 2.4, 4.2);
+  scene.add(fill);
+  const roomLight = new THREE.PointLight(0xfff1df, 0.5, 3.6, 2);
+  roomLight.position.set(1.0, 1.55, 1.2);
+  scene.add(roomLight);
+
+  function canvasTex(w, h, draw, repeatX, repeatY) {
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    t.repeat.set(repeatX, repeatY);
+    return t;
+  }
+  function plankMap(roomX, roomZ) {
+    return canvasTex(512, 128, (g, w, h) => {
+      g.fillStyle = "#4a2a1c";
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 9; i++) {
+        const tone = 70 + (i % 3) * 18;
+        g.fillStyle = `rgb(${tone + 48}, ${Math.max(20, tone - 18)}, ${Math.max(12, tone - 48)})`;
+        g.fillRect(0, i * (h / 9), w, h / 9 - 1);
+        g.strokeStyle = "rgba(40,18,10,0.35)";
+        g.beginPath();
+        for (let x = 8; x < w; x += 7) {
+          g.moveTo(x, i * (h / 9) + 2);
+          g.lineTo(x + 10, (i + 1) * (h / 9) - 3);
+        }
+        g.stroke();
+      }
+    }, roomX / 130, roomZ / 108);
+  }
+  function graniteMap() {
+    return canvasTex(256, 256, (g, w, h) => {
+      g.fillStyle = "#c4c1ba";
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 2200; i++) {
+        const v = 90 + Math.random() * 140;
+        g.fillStyle = `rgba(${v}, ${v}, ${v + 6}, ${0.18 + Math.random() * 0.45})`;
+        g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2.2, 1 + Math.random() * 2.2);
+      }
+    }, 1.6, 1.2);
+  }
+
+  const mat = {};
+  function makeMaterials(L) {
+    const wall = new THREE.MeshStandardMaterial({ color: 0xf4f0e8, roughness: 0.92 });
+    const oak = new THREE.MeshStandardMaterial({ color: 0xc6a36a, roughness: 0.62 });
+    const oakDark = new THREE.MeshStandardMaterial({ color: 0x8d6436, roughness: 0.7 });
+    const floor = new THREE.MeshStandardMaterial({ map: plankMap(L.roomX, L.roomZ), roughness: 0.78, metalness: 0.02 });
+    const stone = new THREE.MeshStandardMaterial({ map: graniteMap(), color: 0xd5d2cb, roughness: 0.55 });
+    const linen = new THREE.MeshStandardMaterial({ color: 0xefe6d6, roughness: 0.92 });
+    const quilt = new THREE.MeshStandardMaterial({ color: 0xe3d0b6, roughness: 0.9 });
+    const pillow = new THREE.MeshStandardMaterial({ color: 0xf7f3ec, roughness: 0.86 });
+    const cloth = new THREE.MeshStandardMaterial({ color: 0xd9c7a4, roughness: 0.95, side: THREE.DoubleSide });
+    const drawer = new THREE.MeshStandardMaterial({ color: 0xf7f4ee, roughness: 0.55 });
+    const rice = new THREE.MeshStandardMaterial({ color: 0xf6f1e4, roughness: 0.52 });
+    const frame = new THREE.MeshStandardMaterial({ color: 0x596066, roughness: 0.38, metalness: 0.55 });
+    const glass = new THREE.MeshStandardMaterial({
+      color: 0xc9e0ea, transparent: true, opacity: 0.18, roughness: 0.04, metalness: 0.05, side: THREE.DoubleSide
+    });
+    // Wardrobe glazing reads a little firmer than the window glass.
+    const glassDoor = new THREE.MeshStandardMaterial({
+      color: 0xcfdde2, transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0.05, side: THREE.DoubleSide
+    });
+    const door = new THREE.MeshStandardMaterial({ color: 0x5c3a2a, roughness: 0.55 });
+    const ground = new THREE.MeshStandardMaterial({ color: 0xb7c0b4, roughness: 1 });
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0xe7e0d4, roughness: 0.94 });
+    Object.assign(mat, {
+      wall, oak, oakDark, floor, stone, linen, quilt, pillow, cloth, drawer, rice,
+      frame, glass, glassDoor, door, ground, beam: beamMat
+    });
+  }
+
+  const boxes = [];
+  function addBox(parent, x, y, z, w, h, d, material, name, flags) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(M(w), M(h), M(d)), material);
+    mesh.position.set(M(x + w / 2), M(y + h / 2), M(z + d / 2));
+    const seeThrough = material.transparent || (flags && flags.indexOf("glass") >= 0);
+    mesh.castShadow = !seeThrough;
+    mesh.receiveShadow = !seeThrough;
+    mesh.name = name || "";
+    parent.add(mesh);
+    boxes.push({ name: name || "box", x, y, z, w, h, d, flags: flags || "" });
+    return mesh;
+  }
+
+  function disposeGroup(group) {
+    group.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+    });
+    group.clear();
+  }
+
+  let current = null;
+  let viewName = "axon";
+
+  function build(L) {
+    disposeGroup(content);
+    boxes.length = 0;
+    Object.values(mat).forEach((m) => {
+      if (m && m.map) m.map.dispose();
+      if (m && m.dispose) m.dispose();
+    });
+    makeMaterials(L);
+
+    const X = L.roomX, Z = L.roomZ, Y = L.roomY, t = L.wall;
+    addBox(content, -80, -30, -90, X + 280, 28, Z + 320, mat.ground, "ground", "outside");
+    addBox(content, 0, -8, 0, X, 8, Z, mat.floor, "floor");
+
+    const ceilings = new THREE.Group();
+    content.add(ceilings);
+    content.userData.ceiling = ceilings;
+    addBox(ceilings, -t, Y, -t, X + t * 2, 8, Z + t * 2, mat.wall, "ceiling");
+
+    addShell(L);
+    addWindows(L);
+    addLintel(L);
+    addBed(L);
+    addWardrobe(L);
+    addDoor(L);
+  }
+
+  function addShell(L) {
+    const X = L.roomX, Z = L.roomZ, Y = L.roomY, t = L.wall;
+    const W = L.main, D = L.door;
+
+    // Window wall, inner face z = 0. Pieces do not share volume.
+    addBox(content, -t, W.head, -t, X + t * 2, Y - W.head, t, mat.wall, "wall-window-head");
+    addBox(content, -t, 0, -t, X + t * 2, W.sill, t, mat.wall, "wall-window-breast");
+    addBox(content, -t, W.sill, -t, W.x0 + t, W.head - W.sill, t, mat.wall, "wall-window-jamb");
+    addBox(content, W.x1, W.sill, -t, X + t - W.x1, W.head - W.sill, t, mat.wall, "wall-window-jamb");
+
+    // Walls that face the axon camera are cut away together: both side walls, the
+    // door wall and its beam. The window wall always stays, so the room still reads
+    // as a room.
+    const cut = new THREE.Group();
+    content.add(cut);
+    content.userData.cutaway = cut;
+    // Left wall, solid. This room has no side window.
+    addBox(cut, -t, 0, 0, t, Y, Z, mat.wall, "wall-left");
+    // Right wall, solid.
+    addBox(cut, X, 0, 0, t, Y, Z, mat.wall, "wall-right");
+
+    // Door wall, inner face z = Z. The leaf swings past this face, into the corridor.
+    addBox(cut, -t, D.h, Z, X + t * 2, Y - D.h, t, mat.wall, "wall-door-head");
+    addBox(cut, -t, 0, Z, D.x0 + t, D.h, t, mat.wall, "wall-door-left");
+    addBox(cut, D.x1, 0, Z, X + t - D.x1, D.h, t, mat.wall, "wall-door-right");
+
+    // Corridor beyond the door. The floor slab always shows, so the leaf has
+    // something to swing over in the axon view.
+    const cZ = Z + t;
+    const cD = D.depth - t;
+    addBox(cut, D.x0, -8, Z, D.x1 - D.x0, 8, D.depth, mat.floor, "floor-corridor");
+    addBox(content.userData.ceiling, D.x0 - t, Y, Z, (D.x1 - D.x0) + t * 2, 8, D.depth + t, mat.wall, "ceiling");
+    addBox(cut, D.x0 - t, 0, cZ, t, Y, cD, mat.wall, "wall-corridor");
+    addBox(cut, D.x1, 0, cZ, t, Y, cD, mat.wall, "wall-corridor");
+
+    // Granite sill along the whole main window.
+    addBox(content, 0, 0, 0, X, L.sillH - 3, L.sillD, mat.wall, "sill");
+    addBox(content, 0, L.sillH - 3, 0, X, 3, L.sillD, mat.stone, "sill-cap");
+  }
+
+  function addWindows(L) {
+    const W = L.main;
+    const glassY = W.sill + 2;
+    const glassH = W.head - W.sill - 4;
+    addBox(content, W.x0, W.sill, -1.5, W.x1 - W.x0, 3, 3, mat.frame, "frame", "trim");
+    addBox(content, W.x0, W.head - 3, -1.5, W.x1 - W.x0, 3, 3, mat.frame, "frame", "trim");
+    addBox(content, W.x0, W.sill, -1.5, 3, W.head - W.sill, 3, mat.frame, "frame", "trim");
+    addBox(content, W.x1 - 3, W.sill, -1.5, 3, W.head - W.sill, 3, mat.frame, "frame", "trim");
+    // Two vertical mullions: the big window reads as three lights.
+    const span = W.x1 - W.x0;
+    [1 / 3, 2 / 3].forEach((f) => {
+      const mx = W.x0 + span * f;
+      addBox(content, mx - 1.4, glassY, -2.2, 2.8, glassH, 2.4, mat.frame, "mullion", "trim");
+    });
+    // Transom across the whole window.
+    addBox(content, W.x0 + 3, 148, -2.2, span - 6, 2.8, 2.4, mat.frame, "mullion", "trim");
+    addBox(content, W.x0 + 4, glassY, -1.2, span - 8, glassH, 0.8, mat.glass, "glass-main", "glass");
+
+    // Curtains at both ends of the window.
+    addBox(content, W.x0 + 2, W.sill, -9, 16, W.head - W.sill, 5, mat.cloth, "curtain", "outside");
+    addBox(content, W.x1 - 18, W.sill, -9, 16, W.head - W.sill, 5, mat.cloth, "curtain", "outside");
+  }
+
+  function addLintel(L) {
+    const B = L.lintel;
+    // Above the sill, inside the room. Bottom meets the window head; top meets the ceiling.
+    addBox(content, B.x, B.y, B.z, B.w, B.h, B.d, mat.beam, "lintel");
+    // The beam over the door wall is cut away with that wall, except the stretch
+    // that runs over the wardrobe: that part is what caps the top corner of the
+    // cabinet, so it stays put.
+    const D = L.doorBeam;
+    const cutAt = L.wardrobe.x;
+    addBox(content.userData.cutaway, D.x, D.y, D.z, cutAt - D.x, D.h, D.d, mat.beam, "door-beam");
+    addBox(content, cutAt, D.y, D.z, D.x + D.w - cutAt, D.h, D.d, mat.beam, "ward-cap");
+  }
+
+  function addBed(L) {
+    const B = L.bed;
+    const t = 2.4;            // board thickness
+    const plinth = 6;         // recessed base
+    const x0 = B.x, x1 = B.x + B.w;
+    const z0 = B.platZ, z1 = B.z + B.d;
+    const d = z1 - z0;        // timber platform beyond the stone sill
+    const top = B.base;       // 60, flush with the sill
+
+    // Platform carcass. The stone sill already carries the first 40cm, so the
+    // timber part starts where the stone ends and stands on the floor.
+    addBox(content, x0 + 4, 0, z0, B.w - 8, plinth, d, mat.oakDark, "plat-plinth");
+    addBox(content, x0, plinth, z0, t, top - 6 - plinth, d, mat.oak, "plat-side");
+    addBox(content, x1 - t, plinth, z0, t, top - 6 - plinth, d, mat.oak, "plat-side");
+    addBox(content, x0 + t, plinth, z0, B.w - t * 2, top - 6 - plinth, t, mat.oak, "plat-back");
+    addBox(content, x0, top - 6, z0, B.w, 6, d, mat.oak, "plat-top");
+
+    // Drawers in the room face, at z = 150. Two rows. The run stops short of the
+    // wardrobe, which stands in front of the right end of the platform.
+    const dz0 = plinth + 2, dz1 = top - 6 - 2;
+    const gap = 2;
+    // The wardrobe stands against the platform face, so the drawers only run
+    // up to its left edge.
+    const drawTo = L.wardrobe.x - 2;
+    const dh = (dz1 - dz0 - gap * (B.drawerRows - 1)) / B.drawerRows;
+    const dw = (drawTo - (x0 + t) - gap * (B.drawerCols - 1)) / B.drawerCols;
+    for (let r = 0; r < B.drawerRows; r++) {
+      for (let c = 0; c < B.drawerCols; c++) {
+        const dy = dz0 + r * (dh + gap);
+        const dx = x0 + t + c * (dw + gap);
+        addBox(content, dx, dy, z1 - t, dw, dh, t, mat.drawer, "plat-drawer");
+        addBox(content, dx + dw / 2 - 8, dy + dh / 2 - 1, z1, 16, 2, 1.6, mat.oakDark, "pull");
+      }
+    }
+
+    // Mattress across the whole raised zone: the sill and the timber platform
+    // are one level, so the bed does not step.
+    const my = top - BITE;
+    addBox(content, B.x, my, B.z, B.w, B.mattH + BITE, B.d, mat.linen, "mattress");
+    const sleep = top + B.mattH;
+
+    // Head end against the right wall. Pillows first, then the duvet over the
+    // foot two thirds.
+    addBox(content, B.x + B.w - 44, sleep - BITE, 14, 36, 10 + BITE, 38, mat.pillow, "pillow");
+    addBox(content, B.x + B.w - 44, sleep - BITE, B.d - 52, 36, 10 + BITE, 38, mat.pillow, "pillow");
+    addBox(content, B.x + 6, sleep - BITE, 4, B.w - 56, 6 + BITE, B.d - 8, mat.quilt, "duvet");
+    // A turned-down sheet at the head of the duvet, sitting on top of it.
+    addBox(content, B.x + B.w - 64, sleep + 6 - BITE, 4, 16, 9 + BITE, B.d - 8, mat.linen, "sheet");
+
+    // Headboard panel along the right wall, sitting on the mattress.
+    addBox(content, B.x + B.w - 8, sleep - BITE, B.z, 8, B.headH, B.d, mat.oak, "headboard");
+  }
+
+  // The floor to ceiling wardrobe in the far right corner: 100 wide by 90 deep.
+  // The upper half has two hinged leaves on the window side; the lower half is
+  // open to the left wall, behind two glazed leaves on that side.
+  function addWardrobe(L) {
+    const W = L.wardrobe;
+    const t = W.t, dt = W.doorT;
+    const x = W.x, z = W.z, w = W.w, d = W.d, h = W.h;
+    const beamY = L.doorBeam.y;    // 238, underside of the beam over the door wall
+    const beamZ = L.doorBeam.z;    // 230, its room-side face
+    const backZ = z + d - t;       // 238, inner face of the back on the door wall
+    const frontZ = z + dt;         // 151.6, carcass starts behind the doors
+    const innerX = x + t, innerW = w - t * 2;   // 102 and 96
+    const leafW = innerW / 2;      // 48, two leaves across the front
+    const split = W.split;         // 135
+
+    // Sides. The right one is on the right wall. The left one only runs the
+    // upper half, because the lower half opens to the left.
+    addBox(content, x + w - t, 0, z, t, h, beamZ - z, mat.oak, "ward-side");
+    addBox(content, x + w - t, 0, beamZ, t, beamY, backZ - beamZ, mat.oak, "ward-side");
+    addBox(content, x, split, z, t, h - split, beamZ - z, mat.oak, "ward-side");
+    addBox(content, x, split, beamZ, t, beamY - split, backZ - beamZ, mat.oak, "ward-side");
+    // Back on the door wall, below the beam.
+    addBox(content, innerX, 0, backZ, innerW, beamY, t, mat.oak, "ward-back");
+    // Top board, stopping at the beam face.
+    addBox(content, innerX, h - t, z, innerW, t, beamZ - z, mat.oak, "ward-top");
+    // Divider between the open lower half and the cupboard above it.
+    addBox(content, innerX, split - 2, z, innerW, 2, backZ - z, mat.oak, "ward-divider");
+    // Bottom board of the lower half.
+    addBox(content, innerX, 0, z, innerW, 3, backZ - z, mat.oak, "ward-bottom");
+
+    // Upper half: two solid leaves on the window side.
+    addBox(content, innerX, split, z, leafW, h - t - split, dt, mat.rice, "ward-door");
+    addBox(content, innerX + leafW, split, z, leafW, h - t - split, dt, mat.rice, "ward-door");
+    addBox(content, innerX + leafW - 3, 190, z - 1.4, 1.4, 18, 1.6, mat.frame, "pull");
+    addBox(content, innerX + leafW + 1.6, 190, z - 1.4, 1.4, 18, 1.6, mat.frame, "pull");
+
+    // Lower half: two glazed leaves on the left side, opening into the room.
+    const halfD = (backZ - z) / 2;     // 44
+    glassLeafZ(x, 3, split - 2, z, halfD);
+    glassLeafZ(x + 1.6, 3, split - 2, z + halfD, halfD);
+    addBox(content, x - 1.4, 60, z + halfD - 4, 1.4, 18, 1.6, mat.frame, "pull");
+
+    // Hanging rail in the open half, running along the opening, with clothes.
+    addBox(content, 140, 112, z + 5, 2, 2, backZ - z - 10, mat.frame, "rod");
+    const tones = [mat.cloth, mat.linen, mat.quilt];
+    for (let i = 0; i < 4; i++) {
+      addBox(content, 142, 24, z + 8 + i * 22, 2.4, 88, 20, tones[i % tones.length], "garment");
+    }
+    // Shelves in the upper half, over the rail.
+    [170, 205, 240].forEach((sy) => {
+      const sz = sy > beamY ? beamZ - frontZ : backZ - frontZ;
+      addBox(content, innerX, sy, frontZ, innerW, 2, sz, mat.oak, "ward-shelf");
+    });
+  }
+
+  // A glazed door leaf standing on the left side: two stiles, two rails, glass.
+  function glassLeafZ(x, y0, y1, z0, d) {
+    const st = 3, rl = 4;         // stile width, rail height
+    addBox(content, x, y0, z0, 1.6, y1 - y0, st, mat.rice, "ward-door");
+    addBox(content, x, y0, z0 + d - st, 1.6, y1 - y0, st, mat.rice, "ward-door");
+    addBox(content, x, y0, z0 + st, 1.6, rl, d - st * 2, mat.rice, "ward-door");
+    addBox(content, x, y1 - rl, z0 + st, 1.6, rl, d - st * 2, mat.rice, "ward-door");
+    addBox(content, x + 0.3, y0 + rl, z0 + st, 1.0, y1 - y0 - rl * 2, d - st * 2,
+      mat.glassDoor, "ward-glass", "glass");
+  }
+
+  // A glazed door leaf: two stiles, two rails, one pane of glass.
+  function glassLeaf(x, y0, y1, z0, w) {
+    const st = 3, rl = 4;         // stile width, rail height
+    const z1 = z0 + w;
+    addBox(content, x, y0, z0, st, y1 - y0, 1.6, mat.rice, "ward-door");
+    addBox(content, x + w - st, y0, z0, st, y1 - y0, 1.6, mat.rice, "ward-door");
+    addBox(content, x + st, y0, z0, w - st * 2, rl, 1.6, mat.rice, "ward-door");
+    addBox(content, x + st, y1 - rl, z0, w - st * 2, rl, 1.6, mat.rice, "ward-door");
+    addBox(content, x + st, y0 + rl, z0 + 0.3, w - st * 2, y1 - y0 - rl * 2, 1.0,
+      mat.glassDoor, "ward-glass", "glass");
+  }
+
+  function addDoor(L) {
+    const D = L.door;
+    const hinge = new THREE.Group();
+    hinge.position.set(M(D.x0), 0, M(L.roomZ));
+    hinge.rotation.y = D.swing * Math.PI / 180;
+    (content.userData.cutaway || content).add(hinge);
+    const leaf = D.x1 - D.x0;
+    addBox(hinge, 0, 1, 0, leaf, D.h - 2, 4, mat.door, "door", "door");
+    addBox(hinge, leaf - 10, 100, 4, 3, 12, 1.4, mat.frame, "handle", "door");
+  }
+
+  function overlap(a, b, eps) {
+    const dx = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+    const dy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    const dz = Math.min(a.z + a.d, b.z + b.d) - Math.max(a.z, b.z);
+    if (dx > eps && dy > eps && dz > eps) return [dx, dy, dz];
+    return null;
+  }
+
+  function audit(L) {
+    const skip = /glass|frame|mullion|curtain|ground|vent|handle|notebook|pull|rod|garment/;
+    const shell = /^wall|^floor|^ceiling|^sill/;
+    const solid = boxes.filter((b) => !skip.test(b.name) && b.flags.indexOf("glass") < 0 && b.flags.indexOf("trim") < 0 && b.flags.indexOf("outside") < 0 && b.flags.indexOf("door") < 0);
+    const clashes = [];
+    for (let i = 0; i < solid.length; i++) {
+      const a = solid[i];
+      if (!shell.test(a.name)) {
+        if (a.x < -0.5 || a.y < -0.5 || a.z < -0.5 || a.x + a.w > L.roomX + 0.5 || a.z + a.d > L.roomZ + 0.5 || a.y + a.h > L.roomY + 1) {
+          clashes.push(a.name + " outside room");
+        }
+      }
+      for (let j = i + 1; j < solid.length; j++) {
+        const b = solid[j];
+        if (shell.test(a.name) && shell.test(b.name)) continue;
+        const o = overlap(a, b, 0.8);
+        if (o) clashes.push(a.name + " × " + b.name);
+      }
+    }
+    return clashes;
+  }
+
+  const target = new THREE.Vector3();
+  const spherical = new THREE.Spherical();
+  const offset = new THREE.Vector3();
+  let dragging = false;
+  let dragMode = "rot";
+  let lastX = 0, lastY = 0;
+
+  function syncOrbit() {
+    offset.copy(camera.position).sub(target);
+    spherical.setFromVector3(offset);
+  }
+  function applyOrbit() {
+    spherical.phi = Math.max(0.12, Math.min(1.45, spherical.phi));
+    spherical.radius = Math.max(0.45, Math.min(12, spherical.radius));
+    offset.setFromSpherical(spherical);
+    camera.position.copy(target).add(offset);
+    if (camera.position.y < 0.16) camera.position.y = 0.16;
+    camera.lookAt(target);
+  }
+  function setView(name) {
+    const L = current;
+    viewName = name;
+    camera.up.set(0, 1, 0);
+    const X = M(L.roomX), Z = M(L.roomZ);
+    const ceilingOn = name === "entry";
+    if (content.userData.ceiling) content.userData.ceiling.visible = ceilingOn;
+    if (content.userData.cutaway) content.userData.cutaway.visible = name !== "axon";
+    camera.fov = name === "entry" ? 68 : 42;
+    if (name === "entry") {
+      // Just inside the threshold, as you step in. The leaf swings out into the
+      // corridor on the hinge side, so from the corridor the opening is the only
+      // clear line; standing in the room reads the whole space.
+      camera.position.set(0.72, 1.5, Z - 0.14);
+      target.set(0.95, 1.15, 0.45);
+    } else if (name === "plan") {
+      camera.up.set(0, 0, -1);
+      camera.position.set(X / 2, 6.2, Z / 2);
+      target.set(X / 2, 0, Z / 2);
+    } else {
+      camera.position.set(X - 3.7, 4.8, Z + 2.9);
+      target.set(1.0, 0.5, 0.85);
+    }
+    camera.lookAt(target);
+    camera.updateProjectionMatrix();
+    syncOrbit();
+    document.querySelectorAll("[data-view]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.dataset.view === name ? "true" : "false");
+    });
+  }
+
+  renderer.domElement.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    dragMode = e.button === 2 || e.shiftKey ? "pan" : "rot";
+    lastX = e.clientX; lastY = e.clientY;
+    if (camera.up.y < 0.9) {
+      camera.up.set(0, 1, 0);
+      camera.lookAt(target);
+      syncOrbit();
+    }
+    renderer.domElement.setPointerCapture(e.pointerId);
+  });
+  renderer.domElement.addEventListener("pointerup", () => { dragging = false; });
+  renderer.domElement.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    if (dragMode === "rot") {
+      spherical.theta -= dx * 0.005;
+      spherical.phi -= dy * 0.005;
+      applyOrbit();
+    } else {
+      camera.updateMatrixWorld();
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      const scale = spherical.radius * 0.0016;
+      target.addScaledVector(right, -dx * scale);
+      target.addScaledVector(up, dy * scale);
+      applyOrbit();
+    }
+  });
+  renderer.domElement.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    spherical.radius *= e.deltaY > 0 ? 1.08 : 0.92;
+    applyOrbit();
+  }, { passive: false });
+  renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  window.addEventListener("keydown", (e) => {
+    const map = { "1": "axon", "2": "entry", "3": "plan" };
+    if (map[e.key]) setView(map[e.key]);
+  });
+
+  function svgEl(name, attrs) {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.keys(attrs).forEach((k) => n.setAttribute(k, attrs[k]));
+    return n;
+  }
+  function drawPlan(L) {
+    const svg = document.getElementById("plan");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const padL = 40, padT = 40, padR = 96, padB = 64;
+    const extra = L.door.depth;
+    const vbW = L.roomX + padL + padR;
+    const vbH = L.roomZ + extra + padT + padB;
+    svg.setAttribute("viewBox", `0 0 ${vbW} ${vbH}`);
+    const g = svgEl("g", { transform: `translate(${padL} ${padT})` });
+    svg.appendChild(g);
+    function rect(x, z, w, d, fill, stroke, sw) {
+      g.appendChild(svgEl("rect", {
+        x, y: z, width: w, height: d, fill: fill || "none",
+        stroke: stroke || "none", "stroke-width": sw || 0
+      }));
+    }
+    function line(x1, z1, x2, z2, stroke, sw) {
+      g.appendChild(svgEl("line", {
+        x1, y1: z1, x2, y2: z2, stroke, "stroke-width": sw || 1
+      }));
+    }
+    function label(x, z, text, size, anchor) {
+      const t = svgEl("text", {
+        x, y: z, fill: "#1d1915", "font-size": size || 11,
+        "font-family": "Outfit, Noto Sans TC, sans-serif",
+        "text-anchor": anchor || "middle"
+      });
+      t.textContent = text;
+      g.appendChild(t);
+    }
+
+    rect(-12, -12, L.roomX + 24, L.roomZ + 24, "#1c1c1c");
+    rect(0, 0, L.roomX, L.roomZ, "#f4f0e6");
+    // Corridor slab outside the door, at the bottom left.
+    rect(L.door.x0, L.roomZ, L.door.x1 - L.door.x0, L.door.depth, "#efe6d4");
+    // The 40 deep sill band along the window wall.
+    rect(0, 0, L.roomX, L.sillD, "#e4e1da");
+    // The big window on the window wall.
+    rect(L.main.x0, -6, L.main.x1 - L.main.x0, 6, "#d5e3ea");
+    // Beams.
+    rect(L.lintel.x, L.lintel.z, L.lintel.w, L.lintel.d, "rgba(90,86,78,0.16)", "#5c564c", 1.2);
+    rect(L.doorBeam.x, L.doorBeam.z, L.doorBeam.w, L.doorBeam.d, "rgba(90,86,78,0.35)", "#5c564c", 1.2);
+    label(L.lintel.w / 2, 26, "窗台橫梁", 10);
+    label(L.doorBeam.w / 2, L.doorBeam.z + 8, "門牆橫梁", 9);
+
+    // Door leaf, hinged at x0 and swinging out into the corridor.
+    const leaf = L.door.x1 - L.door.x0;
+    const open = Math.abs(L.door.swing) * Math.PI / 180;
+    const tipX = L.door.x0 + leaf * Math.cos(open);
+    const tipZ = L.roomZ + leaf * Math.sin(open);
+    line(L.door.x0, L.roomZ, tipX, tipZ, "#5c3a2a", 1.8);
+    const arc = svgEl("path", {
+      d: `M ${L.door.x1} ${L.roomZ} A ${leaf} ${leaf} 0 0 1 ${tipX} ${tipZ}`,
+      fill: "none", stroke: "#5c3a2a", "stroke-width": 0.8
+    });
+    g.appendChild(arc);
+    label(L.door.x0 + leaf / 2, L.roomZ + L.door.depth + 16, "門 向外開", 10);
+    label(-6, L.roomZ * 0.62, "實牆", 9, "end");
+
+    // The bed: the whole window wall is taken by it.
+    const B = L.bed;
+    rect(B.x, B.z, B.w, B.d, "#f0c98a", "#9a6a28", 1.4);
+    // Timber platform under the mattress, beyond the stone sill.
+    rect(B.x, B.platZ, B.w, B.platD, "rgba(184,122,61,0.35)", "#8d6436", 1.1);
+    // Drawer divisions on the room face, at the front of the platform.
+    const gap = 2, t = 2.4;
+    const dw = (B.w - t * 2 - gap * (B.drawerCols - 1)) / B.drawerCols;
+    for (let c = 0; c < B.drawerCols; c++) {
+      const dx = B.x + t + c * (dw + gap);
+      rect(dx, B.z + B.d - 5, dw, 5, "#f7f4ee", "#8d6436", 0.5);
+    }
+    label(B.x + B.w / 2 - 16, B.z + B.d / 2 + 4, "床 200 × 150");
+    label(B.x + B.w - 4, B.z + B.d / 2 + 4, "床頭", 10, "end");
+    label(B.x + 26, B.platZ + 12, "地台（抽屜）", 9);
+    label(B.x + 26, 20, "石窗台 40", 9);
+    label(L.roomX / 2, B.z + B.d + 78, "剩低 45 深通道", 10);
+
+    // Wardrobe in the far right corner: the upper half opens to the window, the
+    // lower half to the left wall.
+    const W = L.wardrobe;
+    rect(W.x, W.z, W.w, W.d, "#2f5288", "#1d3358", 1.2);
+    // Upper doors on the window side, and the lower opening on the left.
+    rect(W.x, W.z, W.w, 4, "#f6f1e4", "#1d3358", 0.8);
+    rect(W.x, W.z, 4, W.d, "#f6f1e4", "#1d3358", 0.8);
+    label(W.x + W.w / 2, W.z + 24, "到頂衣櫃", 10);
+    label(W.x + W.w / 2, W.z + 36, "深 90 × 闊 100", 9);
+    label(W.x + 20, W.z + 58, "上半：朝大窗開門", 9);
+    label(W.x + 20, W.z + 70, "下半：朝左牆開門", 9);
+    // Arrow for the lower opening, pointing left.
+    line(W.x - 12, W.z + 62, W.x - 30, W.z + 62, "#1d3358", 1.4);
+    line(W.x - 30, W.z + 62, W.x - 23, W.z + 58, "#1d3358", 1.4);
+    line(W.x - 30, W.z + 62, W.x - 23, W.z + 66, "#1d3358", 1.4);
+    label(W.x - 34, W.z + 62, "朝左牆", 9, "end");
+
+    // Dimensions.
+    line(0, -20, L.roomX, -20, "#8a5436");
+    line(0, -24, 0, -16, "#8a5436");
+    line(L.roomX, -24, L.roomX, -16, "#8a5436");
+    label(L.roomX / 2, -26, "闊 200");
+    line(L.roomX + 20, 0, L.roomX + 20, L.roomZ, "#8a5436");
+    line(L.roomX + 16, 0, L.roomX + 24, 0, "#8a5436");
+    line(L.roomX + 16, L.sillD, L.roomX + 24, L.sillD, "#8a5436");
+    line(L.roomX + 16, L.roomZ, L.roomX + 24, L.roomZ, "#8a5436");
+    label(L.roomX + 28, L.sillD / 2 + 3, "窗台 40", 9, "start");
+    label(L.roomX + 28, (L.sillD + L.roomZ) / 2, "地台 200", 9, "start");
+    label(L.roomX + 28, L.roomZ + 16, "進深 240", 9, "start");
+    label(L.main.x0 + 6, -8, "主窗 184", 9, "start");
+  }
+
+  function fillSheet(L, clashes) {
+    const B = L.bed;
+    const W = L.wardrobe;
+    const rows = [
+      ["房間", L.roomZ + " × " + L.roomX + " × " + L.roomY],
+      ["闊度", L.roomX],
+      ["進深", L.roomZ + "，含窗台 " + L.sillD + "，地台 " + (L.roomZ - L.sillD)],
+      ["樓高", L.roomY],
+      ["主窗", (L.main.x1 - L.main.x0) + " 闊，窗台 " + L.main.sill + " 高，窗頂 " + L.main.head],
+      ["窗台", L.sillD + " 深 × " + L.sillH + " 高，橫通全房 " + L.roomX + " 闊"],
+      ["窗台橫梁", L.lintel.w + " 闊 × " + L.lintel.d + " 深 × " + L.lintel.h + "，底 " + L.lintel.y],
+      ["門牆橫梁", L.doorBeam.w + " 闊 × " + L.doorBeam.d + " 深 × " + L.doorBeam.h + "，底 " + L.doorBeam.y],
+      ["床褥", B.w + " × " + B.d + "，橫過成個窗牆，床頭貼右牆、床尾貼左牆"],
+      ["床面", B.base + "（地台面）＋ " + B.mattH + " 褥 = " + (B.base + B.mattH) + " 高"],
+      ["地台", B.platD + " 深 × " + B.w + " 闊，台面 " + B.base + " 高，同石窗台齊平"],
+      ["到頂衣櫃", "深 90 × 闊 100 × 高 " + L.wardrobe.h + "，右下角，貼住右牆同門牆"],
+      ["衣櫃上段", L.wardrobe.split + "–268 米白對開門兩扇，朝住大窗開（向內開）"],
+      ["衣櫃下段", "3–" + L.wardrobe.split + " 兩扇玻璃門，喺左邊，朝左牆開"],
+      ["衣櫃內", "下半挂杆 112 挂衫；上半 3 塊層板（170 / 205 / 240）"],
+      ["地台抽屜", L.bed.drawerCols + " 欄 × " + L.bed.drawerRows + " 高，橫通成個平台面"],
+      ["床頭板", (B.z + B.d) + " 長 × " + B.headH + " 高，貼右牆"],
+      ["左牆", "實牆，冇側窗"],
+      ["右牆", "實牆"],
+      ["房門", (L.door.x1 - L.door.x0) + " × " + L.door.h + "，位於左下角，向外開"],
+      ["剩低空間", "z" + (B.z + B.d) + "–" + L.roomZ + "，" + (L.roomZ - (B.z + B.d)) + " 深，暫時淨空"]
+    ];
+    const table = document.getElementById("schedule");
+    table.innerHTML = "<tr><th>Piece</th><th>cm</th></tr>" + rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
+    const auditEl = document.getElementById("audit");
+    if (clashes.length) {
+      auditEl.className = "bad";
+      auditEl.textContent = "Fit check: " + clashes.slice(0, 6).join("; ");
+    } else {
+      auditEl.className = "ok";
+      auditEl.textContent = "幾何沒有重疊。房間淨闊 " + L.roomX + "，進深 " + L.roomZ + "（窗台 " + L.sillD + " + 地台 " + (L.roomZ - L.sillD) + "），樓高 " + L.roomY + "。床 " + B.w + " × " + B.d + " 橫過成個窗牆，床頭貼右牆。床面 " + (B.base + B.mattH) + " 高。房門喺左下角，向外開。";
+    }
+    const foot = document.getElementById("footnote");
+    foot.textContent = "房間淨闊 " + L.roomX + "，淨深 " + (L.roomZ - L.sillD) + "，加埋窗台 " + L.sillD + "，總進深 " + L.roomZ + "。窗台石板高 " + L.sillH + "，由左牆橫通去右牆。窗台上面有 " + L.lintel.d + " 深嘅橫梁，底 " + L.lintel.y + "，上接天花 " + L.roomY + "。大窗淨闊 " + (L.main.x1 - L.main.x0) + "，分三格窗加一道橫檔，窗兩邊各有一幅布簾。呢間房冇側窗，左牆由頭到尾都係實牆。房門喺門牆最左邊，闊 " + (L.door.x1 - L.door.x0) + "、高 " + L.door.h + "，門鉸喺左，向外開入走廊 " + L.door.depth + "。床：褥 " + B.w + " × " + B.d + "，橫放，床頭貼右牆、床尾貼左牆，剛好填滿成個窗牆嘅闊度。床擺喺窗台上面：石窗台 " + L.sillD + " 深係床身頭 " + L.sillD + " 那一段嘅底，之後木地台 " + B.platD + " 深接住去到 z" + (B.z + B.d) + "，兩者台面同樣 " + B.base + " 高，所以床面冇級，褥 " + B.mattH + " 厚，床面 " + (B.base + B.mattH) + "。石窗台本身被褥蓋住，冇得坐。地台前面（z" + (B.z + B.d) + " 面）開 " + B.drawerCols + " 欄 × " + B.drawerRows + " 高共 " + (B.drawerCols * B.drawerRows) + " 個抽屜；衣櫃而家深咗，前面頂住地台，所以抽屜只做得 x2 至 x" + L.wardrobe.x + "，右邊嗰段喺衣櫃下面，開唔到。床頭板喺右牆，長 " + B.d + "、高 " + B.headH + "，枕頭擺喺右邊兩隻，被鋪蓋到去左邊三分之二。到頂衣櫃喺右下角，加深咗：深 90（z150 至 z240）× 闊 100（x100 至 x200）× 高 270，貼住右牆同門牆。櫃身貼門牆嗰邊由門牆橫梁封住，所以背面同頂板都喺橫梁嗰個位置（238 / 230）收短。衣櫃分兩段，兩段開口方向唔同：上段 " + W.split + " 至 268 係米白對開門兩扇，朝住大窗開，但要向內開先夾得落（櫃深 90，門扇 48，向外開會掃到地台）；下段 3 至 " + W.split + " 冇咗朝窗嗰個開口，改為喺左邊朝左牆開兩扇玻璃門，每扇 44 深，3 闊直框加上下 4 高嘅橫框中間鑲玻璃。下半入面挂杆高 112 挂衫，上半有 3 塊層板（170 / 205 / 240）。冇書枱。門牆橫梁深 " + L.doorBeam.d + "、底 " + L.doorBeam.y + "，所以衣櫃埋門嗰邊喺 " + L.doorBeam.y + " 停手，頂板同最上面嗰塊層板都喺橫梁嗰個位置收短，由橫梁封住個角。衣櫃前面（x" + L.wardrobe.x + " 面）就係地台抽屜，兩者一齊夾住 z" + (B.z + B.d) + " 呢條線。衣櫃左邊（x0 至 x100）就係全間房嘅活動空間，門口一入就見到衣櫃嘅左邊同兩扇玻璃門。";
+    drawPlan(L);
+  }
+
+  function resize() {
+    const w = stage.clientWidth || 1;
+    const h = stage.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+
+  function applyMode(mode) {
+    current = layoutOf(mode);
+    build(current);
+    const clashes = audit(current);
+    fillSheet(current, clashes);
+    document.documentElement.dataset.audit = clashes.length ? clashes.join(" | ") : "ok";
+    document.documentElement.dataset.mode = mode;
+    document.querySelectorAll("[data-mode]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.dataset.mode === mode ? "true" : "false");
+    });
+    setView(viewName);
+    resize();
+    renderer.render(scene, camera);
+  }
+
+  document.querySelectorAll("[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.view));
+  });
+  document.querySelectorAll("[data-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => applyMode(btn.dataset.mode));
+  });
+
+  const q = new URLSearchParams(location.search);
+  viewName = ["entry", "axon", "plan"].includes(q.get("view")) ? q.get("view") : "axon";
+  if (q.get("clean") === "1") {
+    document.querySelectorAll("aside, .hint").forEach((n) => { n.style.display = "none"; });
+    stage.style.inset = "0";
+  }
+  applyMode("confirmed");
+
+  function frame() {
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.__ready = true;
+  } catch (err) {
+    document.documentElement.dataset.audit = "js-error: " + (err.message || err);
+    const el = document.getElementById("audit");
+    if (el) { el.className = "bad"; el.textContent = String(err && err.message || err); }
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
